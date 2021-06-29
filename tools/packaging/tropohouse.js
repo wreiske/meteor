@@ -1,4 +1,3 @@
-var _ = require("underscore");
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
@@ -98,7 +97,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
       // consistent with the paths in the downloaded tarball.
 
       // Now, we have to convert the unibuild files in the same way.
-      _.each(convertedMetadata.builds, function (unibuildMeta) {
+      convertedMetadata.builds.forEach(function (unibuildMeta) {
         var unibuildJsonPath = files.pathJoin(targetDirectory,
                                               unibuildMeta.path);
         var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
@@ -120,7 +119,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
       });
 
       // Lastly, convert the build plugins, which are in the JSImage format
-      _.each(convertedMetadata.plugins, function (pluginMeta) {
+      convertedMetadata.plugins.forEach(function (pluginMeta) {
         var programJsonPath = files.pathJoin(targetDirectory, pluginMeta.path);
         var programJson = JSON.parse(files.readFile(programJsonPath));
 
@@ -145,7 +144,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
   return targetDirectory;
 };
 
-_.extend(exports.Tropohouse.prototype, {
+Object.assign(exports.Tropohouse.prototype, {
   // Returns the load path where one can expect to find the package, at a given
   // version, if we have already downloaded from the package server. Does not
   // check for contents.
@@ -227,7 +226,7 @@ _.extend(exports.Tropohouse.prototype, {
       }
     }
 
-    _.each(escapedPackages, function (packageEscaped) {
+    escapedPackages.forEach(function (packageEscaped) {
       var packageDir = files.pathJoin(packageRootDir, packageEscaped);
       var versions;
 
@@ -240,7 +239,7 @@ _.extend(exports.Tropohouse.prototype, {
         }
         throw e;
       }
-      _.each(versions, function (version) {
+      versions.forEach(function (version) {
         // Is this a pre-0.9.0 "warehouse" version with a hash name?
         if (/^[a-f0-9]{3,}$/.test(version)) {
           return;
@@ -288,7 +287,7 @@ _.extend(exports.Tropohouse.prototype, {
       version: options.version
     });
 
-    return _.every(architectures, function (requiredArch) {
+    return architectures.every(function (requiredArch) {
       return archinfo.mostSpecificMatch(requiredArch, downloaded);
     });
   },
@@ -321,7 +320,9 @@ _.extend(exports.Tropohouse.prototype, {
 
     // packageMetadata is null if there is no package at packagePath
     if (packageMetadata) {
-      downloadedArches = _.pluck(packageMetadata.builds, "arch");
+      downloadedArches = packageMetadata.builds.map(function(build){
+        return build.arch
+      });
     }
 
     return downloadedArches;
@@ -393,7 +394,7 @@ _.extend(exports.Tropohouse.prototype, {
       version: version
     });
 
-    var archesToDownload = _.filter(options.architectures, function (requiredArch) {
+    var archesToDownload = options.architectures.filter(function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
     });
 
@@ -466,7 +467,7 @@ _.extend(exports.Tropohouse.prototype, {
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
-        _.each(buildsToDownload, ({ build: { url }}) => {
+        buildsToDownload.forEach(({ build: { url }}) => {
           const packageTarball = buildmessage.enterJob({
             title: "downloading " + packageName + "@" + version + "..."
           }, () => {
@@ -517,7 +518,7 @@ _.extend(exports.Tropohouse.prototype, {
         }, () => {
           // We need to turn our builds into a single isopack.
           var isopack = new Isopack();
-          _.each(buildInputDirs, (buildTempDir, i) => {
+          buildInputDirs.forEach((buildTempDir, i) => {
             isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
               firstIsopack: i === 0,
             });
@@ -527,7 +528,7 @@ _.extend(exports.Tropohouse.prototype, {
         });
 
         // Delete temp directories now (asynchronously).
-        _.each(buildTempDirs, function (buildTempDir) {
+        buildTempDirs.forEach(function (buildTempDir) {
           files.freeTempDir(buildTempDir);
         });
 
