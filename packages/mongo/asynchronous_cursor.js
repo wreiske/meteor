@@ -88,6 +88,7 @@ export class AsynchronousCursor {
       .catch((err) => {
         if (err === timeoutErr) {
           this.close();
+          return;
         }
         throw err;
       });
