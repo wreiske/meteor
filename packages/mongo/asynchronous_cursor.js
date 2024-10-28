@@ -5,7 +5,7 @@ import { replaceMongoAtomWithMeteor, replaceTypes } from './mongo_common';
  * This is just a light wrapper for the cursor. The goal here is to ensure compatibility even if
  * there are breaking changes on the MongoDB driver.
  *
- * @constructor
+ * This is an internal implementation detail and is created lazily by the main Cursor class.
  */
 export class AsynchronousCursor {
   constructor(dbCursor, cursorDescription, options) {

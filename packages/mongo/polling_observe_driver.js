@@ -4,6 +4,16 @@ import { listenAll } from './mongo_driver';
 var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
 var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
 
+/**
+ * @class PollingObserveDriver
+ *
+ * One of two observe driver implementations.
+ *
+ * Characteristics:
+ * - Caches the results of a query
+ * - Reruns the query when necessary
+ * - Suitable for cases where oplog tailing is not available or practical
+ */
 export const PollingObserveDriver = function (options) {
   const self = this;
   self._options = options;

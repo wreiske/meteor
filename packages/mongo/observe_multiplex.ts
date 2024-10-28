@@ -8,6 +8,12 @@ interface ObserveMultiplexerOptions {
 
 export type ObserveHandleCallback = 'added' | 'addedBefore' | 'changed' | 'movedBefore' | 'removed';
 
+/**
+ * Allows multiple identical ObserveHandles to be driven by a single observe driver.
+ *
+ * This optimization ensures that multiple identical observations
+ * don't result in duplicate database queries.
+ */
 export class ObserveMultiplexer {
   private readonly _ordered: boolean;
   private readonly _onStop: () => void;
