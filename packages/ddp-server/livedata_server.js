@@ -1794,7 +1794,6 @@ Object.assign(Server.prototype, {
     const options = args[0]?.hasOwnProperty('returnStubValue')
       ? args.shift()
       : {};
-    DDP._CurrentMethodInvocation._set();
     DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
     const promise = new Promise((resolve, reject) => {
       DDP._CurrentCallAsyncInvocation._set({ name, hasCallAsyncParent: true });
