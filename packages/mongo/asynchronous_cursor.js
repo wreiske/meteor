@@ -52,7 +52,7 @@ export class AsynchronousCursor {
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!this._cursorDescription.options.tailable && _.has(doc, '_id')) {
+      if (!this._cursorDescription.options.tailable && '_id' in doc) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
@@ -127,7 +127,7 @@ export class AsynchronousCursor {
   }
 
   fetch() {
-    return this.map(_.identity);
+    return this.map(doc => doc);
   }
 
   /**
