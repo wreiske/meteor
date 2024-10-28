@@ -3964,7 +3964,7 @@ Meteor.isServer &&
     test.matches(MongoInternals.NpmModules.mongodb.version, /^5\.(\d+)\.(\d+)/);
     test.equal(typeof MongoInternals.NpmModules.mongodb.module, 'object');
     test.equal(
-      typeof MongoInternals.NpmModules.mongodb.module.ObjectID,
+      typeof MongoInternals.NpmModules.mongodb.module.ObjectId,
       'function'
     );
 
