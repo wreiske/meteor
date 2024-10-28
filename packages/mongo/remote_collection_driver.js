@@ -31,17 +31,14 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
+
     REMOTE_COLLECTION_METHODS.forEach(function (m) {
       ret[m] = self.mongo[m].bind(self.mongo, name);
 
       if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
       const asyncMethodName = getAsyncMethodName(m);
       ret[asyncMethodName] = function (...args) {
-        try {
-          return Promise.resolve(ret[m](...args));
-        } catch (error) {
-          return Promise.reject(error);
-        }
+        return ret[m](...args);
       };
     });
 

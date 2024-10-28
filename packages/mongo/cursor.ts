@@ -97,12 +97,9 @@ export class Cursor<T, U = T> {
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) return;
 
   const methodNameAsync = getAsyncMethodName(methodName);
+
   (Cursor.prototype as any)[methodNameAsync] = function(this: Cursor<any>, ...args: any[]): Promise<any> {
-    try {
-      return Promise.resolve(this[methodName](...args));
-    } catch (error) {
-      return Promise.reject(error);
-    }
+    return this[methodName](...args);
   };
 });
 
