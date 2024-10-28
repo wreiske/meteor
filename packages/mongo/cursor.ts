@@ -2,7 +2,7 @@ import { ASYNC_CURSOR_METHODS, getAsyncMethodName } from 'meteor/minimongo/const
 import { replaceMeteorAtomWithMongo, replaceTypes } from './mongo_common';
 import LocalCollection from 'meteor/minimongo/local_collection';
 import { CursorDescription } from './cursor_description';
-import { ObserveCallbacks } from './types';
+import { ObserveCallbacks, ObserveChangesCallbacks } from './types';
 
 interface MongoInterface {
   rawCollection: (collectionName: string) => any;
@@ -11,7 +11,7 @@ interface MongoInterface {
 }
 
 interface CursorOptions {
-  selfForIteration: Cursor;
+  selfForIteration: Cursor<any>;
   useTransform: boolean;
 }
 
@@ -24,7 +24,7 @@ interface CursorOptions {
  * Wraps a CursorDescription and lazily creates an AsynchronousCursor
  * (only contacts MongoDB when methods like fetch or forEach are called).
  */
-export class Cursor {
+export class Cursor<T, U = T> {
   public _mongo: MongoInterface;
   public _cursorDescription: CursorDescription;
   public _synchronousCursor: any | null;
@@ -62,15 +62,15 @@ export class Cursor {
     return this._cursorDescription.collectionName;
   }
 
-  observe(callbacks: ObserveCallbacks): any {
+  observe(callbacks: ObserveCallbacks<U>): any {
     return LocalCollection._observeFromObserveChanges(this, callbacks);
   }
 
-  async observeAsync(callbacks: ObserveCallbacks): Promise<any> {
+  async observeAsync(callbacks: ObserveCallbacks<U>): Promise<any> {
     return new Promise(resolve => resolve(this.observe(callbacks)));
   }
 
-  observeChanges(callbacks: ObserveCallbacks, options: { nonMutatingCallbacks?: boolean } = {}): any {
+  observeChanges(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): any {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
     return this._mongo._observeChanges(
       this._cursorDescription,
@@ -80,7 +80,7 @@ export class Cursor {
     );
   }
 
-  async observeChangesAsync(callbacks: ObserveCallbacks, options: { nonMutatingCallbacks?: boolean } = {}): Promise<any> {
+  async observeChangesAsync(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): Promise<any> {
     return this.observeChanges(callbacks, options);
   }
 }
@@ -89,7 +89,7 @@ export class Cursor {
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
   if (methodName === 'count') return;
 
-  (Cursor.prototype as any)[methodName] = function(this: Cursor, ...args: any[]): any {
+  (Cursor.prototype as any)[methodName] = function(this: Cursor<any>, ...args: any[]): any {
     const cursor = setupAsynchronousCursor(this, methodName);
     return cursor[methodName](...args);
   };
@@ -97,7 +97,7 @@ export class Cursor {
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) return;
 
   const methodNameAsync = getAsyncMethodName(methodName);
-  (Cursor.prototype as any)[methodNameAsync] = function(this: Cursor, ...args: any[]): Promise<any> {
+  (Cursor.prototype as any)[methodNameAsync] = function(this: Cursor<any>, ...args: any[]): Promise<any> {
     try {
       return Promise.resolve(this[methodName](...args));
     } catch (error) {
@@ -106,7 +106,7 @@ export class Cursor {
   };
 });
 
-function setupAsynchronousCursor(cursor: Cursor, method: string | symbol): any {
+function setupAsynchronousCursor(cursor: Cursor<any>, method: string | symbol): any {
   if (cursor._cursorDescription.options.tailable) {
     throw new Error(`Cannot call ${String(method)} on a tailable cursor`);
   }
