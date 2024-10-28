@@ -120,7 +120,7 @@ export const OplogObserveDriver = function (options) {
   self._writesToCommitWhenWeReachSteady = [];
  };
 
-_.extend(OplogObserveDriver.prototype, {
+Object.assign(OplogObserveDriver.prototype, {
   _init: async function() {
     const self = this;
 
