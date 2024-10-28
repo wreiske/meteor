@@ -1,6 +1,6 @@
 import isObject from 'lodash.isobject';
 import times from 'lodash.times';
-import { ObserveMultiplexer } from './observe_multiplex';
+import { ObserveMultiplexer } from '../observe_multiplex';
 
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
