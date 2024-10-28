@@ -91,11 +91,11 @@ Package.onUse(function (api) {
       "polling_observe_driver.js",
       "oplog_observe_driver.js",
       "oplog_v2_converter.js",
-      "cursor_description.js",
+      "cursor_description.ts",
       "mongo_connection.js",
       "mongo_common.js",
       "asynchronous_cursor.js",
-      "cursor.js",
+      "cursor.ts",
     ],
     "server"
   );
