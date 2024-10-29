@@ -495,6 +495,7 @@ if (Meteor.isServer) {
       self.handle = await cursor.observeChanges({
         added: function(id, fields) {
           self.xs.push(fields.x);
+          console.log('self.expects.length', self.expects);
           test.notEqual(self.expects.length, 0);
           self.expects.pop()();
         },
