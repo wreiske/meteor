@@ -88,7 +88,7 @@ Package.onUse(function (api) {
       "oplog_tailing.ts",
       "observe_multiplex.ts",
       "doc_fetcher.js",
-      "polling_observe_driver.js",
+      "polling_observe_driver.ts",
       "oplog_observe_driver.js",
       "oplog_v2_converter.js",
       "cursor_description.ts",
