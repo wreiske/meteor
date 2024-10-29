@@ -77,7 +77,7 @@ export const replaceMeteorAtomWithMongo = function (document) {
   if (document instanceof MongoDB.Binary) {
     return document;
   }
-  if (document instanceof Mongo.ObjectID) {
+  if (document instanceof MongoDB.ObjectId) {
     return new MongoDB.ObjectId(document.toHexString());
   }
   if (document instanceof MongoDB.Timestamp) {
