@@ -66,9 +66,9 @@ export const forEachTrigger = async function (cursorDescription, triggerCallback
     cursorDescription.selector);
   if (specificIds) {
     for (const id of specificIds) {
-      await triggerCallback(_.extend({id: id}, key));
+      await triggerCallback(Object.assign({id: id}, key));
     }
-    await triggerCallback(_.extend({dropCollection: true, id: null}, key));
+    await triggerCallback(Object.assign({dropCollection: true, id: null}, key));
   } else {
     await triggerCallback(key);
   }

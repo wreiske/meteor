@@ -5,7 +5,7 @@ import { replaceMongoAtomWithMeteor, replaceTypes } from './mongo_common';
  * This is just a light wrapper for the cursor. The goal here is to ensure compatibility even if
  * there are breaking changes on the MongoDB driver.
  *
- * @constructor
+ * This is an internal implementation detail and is created lazily by the main Cursor class.
  */
 export class AsynchronousCursor {
   constructor(dbCursor, cursorDescription, options) {
@@ -52,7 +52,7 @@ export class AsynchronousCursor {
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!this._cursorDescription.options.tailable && _.has(doc, '_id')) {
+      if (!this._cursorDescription.options.tailable && '_id' in doc) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
@@ -88,6 +88,7 @@ export class AsynchronousCursor {
       .catch((err) => {
         if (err === timeoutErr) {
           this.close();
+          return;
         }
         throw err;
       });
@@ -127,7 +128,7 @@ export class AsynchronousCursor {
   }
 
   fetch() {
-    return this.map(_.identity);
+    return this.map(doc => doc);
   }
 
   /**

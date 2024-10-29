@@ -19,7 +19,6 @@ Npm.depends({
   "lodash.has": "4.5.2",
   "lodash.throttle": "4.1.1",
   "lodash.once": "4.1.1",
-  "lodash.identity": "3.0.0",
   "lodash.isobject": "3.0.2",
   "lodash.clone": "4.5.0"
 });
@@ -52,7 +51,6 @@ Package.onUse(function (api) {
   api.use("mongo-decimal", "server");
   //api.use('emitter-promise', 'server');
 
-  api.use("underscore", "server");
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
@@ -93,6 +91,11 @@ Package.onUse(function (api) {
       "polling_observe_driver.js",
       "oplog_observe_driver.js",
       "oplog_v2_converter.js",
+      "cursor_description.ts",
+      "mongo_connection.js",
+      "mongo_common.js",
+      "asynchronous_cursor.js",
+      "cursor.ts",
     ],
     "server"
   );
@@ -112,13 +115,13 @@ Package.onTest(function (api) {
            'ddp', 'base64', 'typescript']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
-  api.addFiles("mongo_livedata_tests.js", ["client", "server"]);
-  api.addFiles("upsert_compatibility_test.js", "server");
-  api.addFiles("allow_tests.js", ["client", "server"]);
-  api.addFiles("collection_tests.js", ["client", "server"]);
-  api.addFiles("collection_async_tests.js", ["client", "server"]);
-  api.addFiles("observe_changes_tests.js", ["client", "server"]);
-  api.addFiles("oplog_tests.js", "server");
-  api.addFiles("oplog_v2_converter_tests.js", "server");
-  api.addFiles("doc_fetcher_tests.js", "server");
+  api.addFiles("tests/mongo_livedata_tests.js", ["client", "server"]);
+  api.addFiles("tests/upsert_compatibility_test.js", "server");
+  api.addFiles("tests/allow_tests.js", ["client", "server"]);
+  api.addFiles("tests/collection_tests.js", ["client", "server"]);
+  api.addFiles("tests/collection_async_tests.js", ["client", "server"]);
+  api.addFiles("tests/observe_changes_tests.js", ["client", "server"]);
+  api.addFiles("tests/oplog_tests.js", "server");
+  api.addFiles("tests/oplog_v2_converter_tests.js", "server");
+  api.addFiles("tests/doc_fetcher_tests.js", "server");
 });

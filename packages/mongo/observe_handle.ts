@@ -4,7 +4,11 @@ let nextObserveHandleId = 1;
 
 export type ObserveHandleCallbackInternal = '_added' | '_addedBefore' | '_changed' | '_movedBefore' | '_removed';
 
-// When the callbacks do not mutate the arguments, we can skip a lot of data clones
+/**
+ * The "observe handle" returned from observeChanges.
+ * Contains a reference to an ObserveMultiplexer.
+ * Used to stop observation and clean up resources.
+ */
 export class ObserveHandle {
   _id: number;
   _multiplexer: ObserveMultiplexer;

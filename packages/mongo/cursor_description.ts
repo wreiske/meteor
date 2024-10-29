@@ -7,8 +7,17 @@ interface CursorOptions {
   disableOplog?: boolean;
   _disableOplog?: boolean;
   tailable?: boolean;
+  transform?: (doc: any) => any;
 }
 
+/**
+ * Represents the arguments used to construct a cursor.
+ * Used as a key for cursor de-duplication.
+ *
+ * All properties must be either:
+ * - JSON-stringifiable, or
+ * - Not affect observeChanges output (e.g., options.transform functions)
+ */
 export class CursorDescription {
   collectionName: string;
   selector: Record<string, any>;

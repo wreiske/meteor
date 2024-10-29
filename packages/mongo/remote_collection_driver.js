@@ -31,26 +31,21 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
+
     REMOTE_COLLECTION_METHODS.forEach(function (m) {
       ret[m] = self.mongo[m].bind(self.mongo, name);
 
       if (!ASYNC_COLLECTION_METHODS.includes(m)) return;
       const asyncMethodName = getAsyncMethodName(m);
       ret[asyncMethodName] = function (...args) {
-        try {
-          return Promise.resolve(ret[m](...args));
-        } catch (error) {
-          return Promise.reject(error);
-        }
+        return ret[m](...args);
       };
     });
 
     CLIENT_ONLY_METHODS.forEach(function (m) {
-      ret[m] = _.bind(self.mongo[m], self.mongo, name);
-
       ret[m] = function (...args) {
         throw new Error(
-          `${m} +  is not available on the server. Please use ${getAsyncMethodName(
+          `${m} is not available on the server. Please use ${getAsyncMethodName(
             m
           )}() instead.`
         );

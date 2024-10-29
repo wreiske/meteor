@@ -30,11 +30,21 @@ var finishIfNeedToPollQuery = function (f) {
 
 var currentId = 0;
 
-// OplogObserveDriver is an alternative to PollingObserveDriver which follows
-// the Mongo operation log instead of just re-polling the query. It obeys the
-// same simple interface: constructing it starts sending observeChanges
-// callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
-// it by calling the stop() method.
+/**
+ * @class OplogObserveDriver
+ * An alternative to PollingObserveDriver which follows the MongoDB operation log
+ * instead of re-polling the query.
+ *
+ * Characteristics:
+ * - Follows the MongoDB operation log
+ * - Directly observes database changes
+ * - More efficient than polling for most use cases
+ * - Requires access to MongoDB oplog
+ *
+ * Interface:
+ * - Construction initiates observeChanges callbacks and ready() invocation to the ObserveMultiplexer
+ * - Observation can be terminated via the stop() method
+ */
 export const OplogObserveDriver = function (options) {
   const self = this;
   self._usesOplog = true;  // tests look at this
@@ -120,7 +130,7 @@ export const OplogObserveDriver = function (options) {
   self._writesToCommitWhenWeReachSteady = [];
  };
 
-_.extend(OplogObserveDriver.prototype, {
+Object.assign(OplogObserveDriver.prototype, {
   _init: async function() {
     const self = this;
 
