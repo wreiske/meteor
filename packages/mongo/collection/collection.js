@@ -724,7 +724,7 @@ Object.assign(Mongo, {
  * @class
  * @param {String} [hexString] Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.ObjectID = MongoID.ObjectID;
+Mongo.ObjectID = MongoID.ObjectId;
 
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.
@@ -750,4 +750,3 @@ Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
-
