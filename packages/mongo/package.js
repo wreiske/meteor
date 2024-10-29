@@ -88,7 +88,7 @@ Package.onUse(function (api) {
       "oplog_tailing.ts",
       "observe_multiplex.ts",
       "doc_fetcher.js",
-      "polling_observe_driver.js",
+      "polling_observe_driver.ts",
       "oplog_observe_driver.js",
       "oplog_v2_converter.js",
       "cursor_description.ts",
@@ -100,9 +100,9 @@ Package.onUse(function (api) {
     "server"
   );
   api.addFiles("local_collection_driver.js", ["client", "server"]);
-  api.addFiles("remote_collection_driver.js", "server");
-  api.addFiles("collection.js", ["client", "server"]);
-  api.addFiles("connection_options.js", "server");
+  api.addFiles("remote_collection_driver.ts", "server");
+  api.addFiles("collection/collection.js", ["client", "server"]);
+  api.addFiles("connection_options.ts", "server");
   api.addAssets("mongo.d.ts", "server");
 });
 
