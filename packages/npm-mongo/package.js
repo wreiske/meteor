@@ -8,8 +8,7 @@ Package.describe({
 });
 
 Npm.depends({
-  mongodb: "5.0.0",
-  "mongodb-legacy": "5.0.0"
+  mongodb: "5.0.0"
 });
 
 Package.onUse(function (api) {
