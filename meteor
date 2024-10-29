@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=22.10.0.5
+BUNDLE_VERSION=22.10.0.6
 
 
 # OS Check. Put here because here is where we download the precompiled
@@ -141,7 +141,7 @@ fi
 # By default, we disable all the Node warnings
 # Then we re-enable the warning on tools/node-process-warning
 # The advantage of this is that we have full control of which warning we want to suppress
-export NODE_OPTIONS="--no-warnings"
+export NODE_OPTIONS="--no-warnings $NODE_OPTIONS"
 
 # We used to set $NODE_PATH here to include the node_modules from the dev
 # bundle, but now we just get them from the symlink at tools/node_modules. This
