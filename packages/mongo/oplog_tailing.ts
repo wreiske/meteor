@@ -226,14 +226,9 @@ export class OplogHandle {
     );
 
     try {
-      const isMasterDoc = await new Promise<any>((resolve, reject) => {
-        this._oplogLastEntryConnection!.db
-          .admin()
-          .command({ ismaster: 1 }, (err: Error | null, result: any) => {
-            if (err) reject(err);
-            else resolve(result);
-          });
-      });
+      const isMasterDoc = await this._oplogLastEntryConnection!.db
+        .admin()
+        .command({ ismaster: 1 });
 
       if (!(isMasterDoc && isMasterDoc.setName)) {
         throw new Error("$MONGO_OPLOG_URL must be set to the 'local' database of a Mongo replica set");

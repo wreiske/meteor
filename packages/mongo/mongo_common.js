@@ -80,6 +80,9 @@ export const replaceMeteorAtomWithMongo = function (document) {
   if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectId(document.toHexString());
   }
+  if (document instanceof MongoDB.ObjectId) {
+    return new MongoDB.ObjectId(document.toHexString());
+  }
   if (document instanceof MongoDB.Timestamp) {
     // For now, the Meteor representation of a Mongo timestamp type (not a date!
     // this is a weird internal thing used in the oplog!) is the same as the
