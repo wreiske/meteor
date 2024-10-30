@@ -2,6 +2,14 @@ import { normalizeProjection } from "../mongo_utils";
 import { AsyncMethods } from './methods_async';
 import { SyncMethods } from './methods_sync';
 import { IndexMethods } from './methods_index';
+import {
+  ID_GENERATORS, normalizeOptions,
+  setupAutopublish,
+  setupConnection,
+  setupDriver,
+  setupMutationMethods,
+  validateCollectionName
+} from './collection_utils';
 
 /**
  * @summary Namespace for MongoDB-related items
@@ -26,131 +34,32 @@ The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOneAsync`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  */
+// Main Collection constructor
 Mongo.Collection = function Collection(name, options) {
-  if (!name && name !== null) {
-    Meteor._debug(
-      'Warning: creating anonymous collection. It will not be ' +
-        'saved or synchronized over the network. (Pass null for ' +
-        'the collection name to turn off this warning.)'
-    );
-    name = null;
-  }
+  name = validateCollectionName(name);
 
-  if (name !== null && typeof name !== 'string') {
-    throw new Error(
-      'First argument to new Mongo.Collection must be a string or null'
-    );
-  }
+  options = normalizeOptions(options);
 
-  if (options && options.methods) {
-    // Backwards compatibility hack with original signature (which passed
-    // "connection" directly instead of in options. (Connections must have a "methods"
-    // method.)
-    // XXX remove before 1.0
-    options = { connection: options };
-  }
-  // Backwards compatibility: "connection" used to be called "manager".
-  if (options && options.manager && !options.connection) {
-    options.connection = options.manager;
-  }
-
-  options = {
-    connection: undefined,
-    idGeneration: 'STRING',
-    transform: null,
-    _driver: undefined,
-    _preventAutopublish: false,
-    ...options,
-  };
-
-  switch (options.idGeneration) {
-    case 'MONGO':
-      this._makeNewID = function() {
-        var src = name
-          ? DDP.randomStream('/collection/' + name)
-          : Random.insecure;
-        return new Mongo.ObjectID(src.hexString(24));
-      };
-      break;
-    case 'STRING':
-    default:
-      this._makeNewID = function() {
-        var src = name
-          ? DDP.randomStream('/collection/' + name)
-          : Random.insecure;
-        return src.id();
-      };
-      break;
-  }
+  this._makeNewID = ID_GENERATORS[options.idGeneration] || ID_GENERATORS.STRING;
 
   this._transform = LocalCollection.wrapTransform(options.transform);
-
   this.resolverType = options.resolverType;
 
-  if (!name || options.connection === null)
-    // note: nameless collections never have a connection
-    this._connection = null;
-  else if (options.connection) this._connection = options.connection;
-  else if (Meteor.isClient) this._connection = Meteor.connection;
-  else this._connection = Meteor.server;
+  this._connection = setupConnection(name, options);
 
-  if (!options._driver) {
-    // XXX This check assumes that webapp is loaded so that Meteor.server !==
-    // null. We should fully support the case of "want to use a Mongo-backed
-    // collection from Node code without webapp", but we don't yet.
-    // #MeteorServerNull
-    if (
-      name &&
-      this._connection === Meteor.server &&
-      typeof MongoInternals !== 'undefined' &&
-      MongoInternals.defaultRemoteCollectionDriver
-    ) {
-      options._driver = MongoInternals.defaultRemoteCollectionDriver();
-    } else {
-      const { LocalCollectionDriver } = require('../local_collection_driver.js');
-      options._driver = LocalCollectionDriver;
-    }
-  }
+  const driver = setupDriver(name, this._connection, options);
+  this._driver = driver;
 
-  this._collection = options._driver.open(name, this._connection);
+  this._collection = driver.open(name, this._connection);
   this._name = name;
-  this._driver = options._driver;
 
-  // TODO[fibers]: _maybeSetUpReplication is now async. Let's watch how not waiting for this function to finish
-    // will affect everything
   this._settingUpReplicationPromise = this._maybeSetUpReplication(name, options);
 
-  // XXX don't define these until allow or deny is actually used for this
-  // collection. Could be hard if the security rules are only defined on the
-  // server.
-  if (options.defineMutationMethods !== false) {
-    try {
-      this._defineMutationMethods({
-        useExisting: options._suppressSameNameError === true,
-      });
-    } catch (error) {
-      // Throw a more understandable error on the server for same collection name
-      if (
-        error.message === `A method named '/${name}/insertAsync' is already defined`
-      )
-        throw new Error(`There is already a collection named "${name}"`);
-      throw error;
-    }
-  }
+  setupMutationMethods(this, name, options);
 
-  // autopublish
-  if (
-    Package.autopublish &&
-    !options._preventAutopublish &&
-    this._connection &&
-    this._connection.publish
-  ) {
-    this._connection.publish(null, () => this.find(), {
-      is_auto: true,
-    });
-  }
+  setupAutopublish(this, name, options);
 
-  Mongo._collections.set(this._name, this);
+  Mongo._collections.set(name, this);
 };
 
 Object.assign(Mongo.Collection.prototype, {
