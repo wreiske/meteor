@@ -1,11 +1,15 @@
 export const ID_GENERATORS = {
   MONGO(name) {
-    const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-    return new Mongo.ObjectID(src.hexString(24));
+    return function() {
+      const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
+      return new Mongo.ObjectID(src.hexString(24));
+    }
   },
   STRING(name) {
-    const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-    return src.id();
+    return function() {
+      const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
+      return src.id();
+    }
   }
 };
 
