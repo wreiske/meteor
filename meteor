@@ -123,7 +123,7 @@ fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 METEOR="$SCRIPT_DIR/tools/index.js"
-PROCESS_REQUIRES="$SCRIPT_DIR/tools/node-process-requires.js"
+PROCESS_REQUIRES="$SCRIPT_DIR/tools/node-process-warnings.js"
 
 # Set the nofile ulimit as high as permitted by the hard-limit/kernel
 if [ "$(ulimit -Sn)" != "unlimited" ]; then
@@ -138,11 +138,6 @@ if [ "$(ulimit -Sn)" != "unlimited" ]; then
     fi
 fi
 
-# By default, we disable all the Node warnings
-# Then we re-enable the warning on tools/node-process-warning
-# The advantage of this is that we have full control of which warning we want to suppress
-export NODE_OPTIONS="--no-warnings $NODE_OPTIONS"
-
 # We used to set $NODE_PATH here to include the node_modules from the dev
 # bundle, but now we just get them from the symlink at tools/node_modules. This
 # is better because node_modules directories found via the ancestor walk from
@@ -154,5 +149,6 @@ export NODE_OPTIONS="--no-warnings $NODE_OPTIONS"
 exec "$DEV_BUNDLE/bin/node" \
      --max-old-space-size=4096 \
      --no-wasm-code-gc \
+     --require="$PROCESS_REQUIRES"\
      ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"

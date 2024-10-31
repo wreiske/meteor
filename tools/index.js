@@ -1,4 +1,3 @@
-require("./node-process-warnings");
 const { getChildProcess } = require("./cli/dev-bundle-bin-commands");
 
 getChildProcess({ isFirstTry: true }).then(
