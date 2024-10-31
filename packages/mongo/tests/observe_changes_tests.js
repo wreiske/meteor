@@ -478,7 +478,7 @@ if (Meteor.isServer) {
       self.expects = [];
       self.insert = async function(fields) {
         return coll.insertAsync(
-          Object.assign({ ts: new MongoInternals.MongoTimestamp(0, 0) }, fields)
+          Object.assign({ ts: new MongoInternals.MongoTimestamp({ t: 0, i: 0 }) }, fields)
         );
       };
 
@@ -585,6 +585,7 @@ if (Meteor.isServer) {
       const promise = new Promise(r => callOnFinish = r);
 
       var environmentVariable = new Meteor.EnvironmentVariable();
+
       await environmentVariable.withValue(true, async function() {
         var handle = await c
           .find({}, { fields: { 'type.name': 1 } })

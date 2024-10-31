@@ -62,7 +62,7 @@
     "vm-browserify"
   ],
   "devDependencies": {
-    "rimraf": "^2.7.1"
+    "rimraf": "^5.0.10"
   },
   "repository": {
     "type": "git",

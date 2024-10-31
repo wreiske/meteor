@@ -1,4 +1,4 @@
-import { DocFetcher } from './doc_fetcher.js';
+import { DocFetcher } from '../doc_fetcher.js';
 
 testAsyncMulti('mongo-livedata - doc fetcher', [
   async function(test, expect) {
