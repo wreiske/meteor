@@ -96,14 +96,7 @@ process.env.MONGO_OPLOG_URL &&
       }
       // XXX implement bulk insert #1255
       var rawCollection = self.collection.rawCollection();
-      rawCollection.insertMany(
-        docs,
-        Meteor.bindEnvironment(
-          expect(function(err) {
-            test.isFalse(err);
-          })
-        )
-      );
+      await rawCollection.insertMany(docs);
     },
 
     async function(test, expect) {
