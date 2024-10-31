@@ -1,4 +1,4 @@
-import { oplogV2V1Converter } from './oplog_v2_converter';
+import { oplogV2V1Converter } from '../oplog_v2_converter';
 
 const cases = [
   [
