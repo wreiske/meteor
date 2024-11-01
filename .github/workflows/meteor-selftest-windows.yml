@@ -22,6 +22,9 @@ env:
 jobs:
   test:
     runs-on: windows-2019-meteor
+    concurrency:
+      group: ${{ github.head_ref }}-meteor-selftest-windows
+      cancel-in-progress: true
 
     steps:
       - name: Checkout code
@@ -30,7 +33,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: 20.x
+          node-version: 22.x
 
       - name: Install dependencies
         shell: pwsh

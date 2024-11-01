@@ -55,16 +55,15 @@ const asyncGet =
       ));
 Tinytest.addAsync("webapp - content-type header", async function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
+  const staticFilesKeys = Object.keys(staticFiles);
 
-  const cssResource = _.find(
-    _.keys(staticFiles),
+  const cssResource = staticFilesKeys.find(
     function (url) {
       return staticFiles[url].type === "css";
     }
   );
 
-  const jsResource = _.find(
-    _.keys(staticFiles),
+  const jsResource = staticFilesKeys.find(
     function (url) {
       return staticFiles[url].type === "js";
     }
@@ -203,7 +202,6 @@ Tinytest.addAsync(
 
     {
       const { stream }  = await WebAppInternals.getBoilerplate({
-        browser: "doesn't-matter",
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
