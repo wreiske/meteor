@@ -1234,19 +1234,21 @@ if (Meteor.isClient) {
     });
 
     let insertId;
+    let resultId
 
     try {
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 250; i++) {
         messages = [];
 
         insertId = await Meteor.callAsync(`insert-${collName}`);
 
-        await Meteor.sleep(1)
-
         const hasResult = messages.some(msg => msg.msg === 'result');
+
+        resultId = messages.find(msg => msg.msg === 'result').id;
+
         const hasAdded = messages.some(msg => msg.msg === 'added');
         const hasUpdated = messages.some(msg =>
-          msg.msg === 'updated' && msg.methods?.includes(messages[0].id)
+          msg.msg === 'updated' && msg.methods?.includes(resultId)
         );
 
         test.isTrue(hasResult, `Iteration ${i}: Should receive RESULT message for insert`);
@@ -1257,12 +1259,13 @@ if (Meteor.isClient) {
 
         await Meteor.callAsync(`update-${collName}`, insertId);
 
-        await Meteor.sleep(1)
-
         const hasUpdateResult = messages.some(msg => msg.msg === 'result');
+
+        resultId = messages.find(msg => msg.msg === 'result').id;
+
         const hasChanged = messages.some(msg => msg.msg === 'changed');
         const hasUpdateUpdated = messages.some(msg =>
-          msg.msg === 'updated' && msg.methods?.includes(messages[0].id)
+          msg.msg === 'updated' && msg.methods?.includes(resultId)
         );
 
         test.isTrue(hasUpdateResult, `Iteration ${i}: Should receive RESULT message for update`);
@@ -1273,12 +1276,13 @@ if (Meteor.isClient) {
 
         await Meteor.callAsync(`remove-${collName}`, insertId);
 
-        await Meteor.sleep(1)
-
         const hasRemoveResult = messages.some(msg => msg.msg === 'result');
+
+        resultId = messages.find(msg => msg.msg === 'result').id;
+
         const hasRemoved = messages.some(msg => msg.msg === 'removed');
         const hasRemoveUpdated = messages.some(msg =>
-          msg.msg === 'updated' && msg.methods?.includes(messages[0].id)
+          msg.msg === 'updated' && msg.methods?.includes(resultId)
         );
 
         test.isTrue(hasRemoveResult, `Iteration ${i}: Should receive RESULT message for remove`);
