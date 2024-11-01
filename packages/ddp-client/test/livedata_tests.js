@@ -1193,6 +1193,104 @@ testAsyncMulti('livedata - methods with nested stubs', [
   },
 ]);
 
+const collName = `test-collection`;
+const coll = new Mongo.Collection(collName);
+
+if (Meteor.isServer) {
+  Meteor.publish(`pub-${collName}`, function () {
+    return coll.find();
+  });
+}
+
+Meteor.methods({
+  [`insert-${collName}`]: async function() {
+    return await coll.insertAsync({ value: 1 });
+  },
+  [`update-${collName}`]: async function(id) {
+    return await coll.updateAsync(id, { $set: { value: 2 } });
+  },
+  [`remove-${collName}`]: async function(id) {
+    return await coll.removeAsync(id);
+  }
+});
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('livedata - method updated message with subscriptions', async function (test) {
+    let messages = [];
+
+    const onMessage = message => messages.push(EJSON.parse(message));
+
+    Meteor.connection._stream.on('message', onMessage);
+
+    const sub = Meteor.subscribe(`pub-${collName}`);
+
+    await new Promise(resolve => {
+      const id = setInterval(() => {
+        if (sub.ready()) {
+          clearInterval(id);
+          resolve();
+        }
+      }, 10);
+    });
+
+    let insertId;
+
+    try {
+      for (let i = 0; i < 100; i++) {
+        messages = [];
+
+        insertId = await Meteor.callAsync(`insert-${collName}`);
+
+        await Meteor.sleep(1)
+
+        const hasResult = messages.some(msg => msg.msg === 'result');
+        const hasAdded = messages.some(msg => msg.msg === 'added');
+        const hasUpdated = messages.some(msg =>
+          msg.msg === 'updated' && msg.methods?.includes(messages[0].id)
+        );
+
+        test.isTrue(hasResult, `Iteration ${i}: Should receive RESULT message for insert`);
+        test.isTrue(hasAdded, `Iteration ${i}: Should receive ADDED message for insert`);
+        test.isTrue(hasUpdated, `Iteration ${i}: Should receive UPDATED message for insert`);
+
+        messages = [];
+
+        await Meteor.callAsync(`update-${collName}`, insertId);
+
+        await Meteor.sleep(1)
+
+        const hasUpdateResult = messages.some(msg => msg.msg === 'result');
+        const hasChanged = messages.some(msg => msg.msg === 'changed');
+        const hasUpdateUpdated = messages.some(msg =>
+          msg.msg === 'updated' && msg.methods?.includes(messages[0].id)
+        );
+
+        test.isTrue(hasUpdateResult, `Iteration ${i}: Should receive RESULT message for update`);
+        test.isTrue(hasChanged, `Iteration ${i}: Should receive CHANGED message`);
+        test.isTrue(hasUpdateUpdated, `Iteration ${i}: Should receive UPDATED message for update`);
+
+        messages = [];
+
+        await Meteor.callAsync(`remove-${collName}`, insertId);
+
+        await Meteor.sleep(1)
+
+        const hasRemoveResult = messages.some(msg => msg.msg === 'result');
+        const hasRemoved = messages.some(msg => msg.msg === 'removed');
+        const hasRemoveUpdated = messages.some(msg =>
+          msg.msg === 'updated' && msg.methods?.includes(messages[0].id)
+        );
+
+        test.isTrue(hasRemoveResult, `Iteration ${i}: Should receive RESULT message for remove`);
+        test.isTrue(hasRemoved, `Iteration ${i}: Should receive REMOVED message`);
+        test.isTrue(hasRemoveUpdated, `Iteration ${i}: Should receive UPDATED message for remove`);
+      }
+    } finally {
+      sub.stop();
+    }
+  });
+}
+
 // TODO [FIBERS] - check if this still makes sense to have
 
 //  Tinytest.addAsync('livedata - isAsync call', async function (test) {
