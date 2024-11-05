@@ -20,7 +20,7 @@ Npm.depends({
   "lodash.throttle": "4.1.1",
   "lodash.once": "4.1.1",
   "lodash.isobject": "3.0.2",
-  "lodash.clone": "4.5.0"
+  "lodash.clone": "4.5.0",
 });
 
 Npm.strip({
@@ -50,7 +50,6 @@ Package.onUse(function (api) {
   api.use("mongo-decimal", "client", { weak: true });
   api.use("mongo-decimal", "server");
   //api.use('emitter-promise', 'server');
-
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
@@ -103,16 +102,26 @@ Package.onUse(function (api) {
   api.addFiles("remote_collection_driver.ts", "server");
   api.addFiles("collection/collection.js", ["client", "server"]);
   api.addFiles("connection_options.ts", "server");
+  // For zodern:types to pick up our published types.
+  // Both the .d.ts file and package-types.json must be published
   api.addAssets("mongo.d.ts", "server");
+  api.addAssets("package-types.json", "server");
 });
 
 Package.onTest(function (api) {
-  api.use('mongo');
-  api.use('check');
-  api.use('ecmascript');
-  api.use('npm-mongo', 'server');
-  api.use(['tinytest', 'test-helpers', 'ejson', 'random',
-           'ddp', 'base64', 'typescript']);
+  api.use("mongo");
+  api.use("check");
+  api.use("ecmascript");
+  api.use("npm-mongo", "server");
+  api.use([
+    "tinytest",
+    "test-helpers",
+    "ejson",
+    "random",
+    "ddp",
+    "base64",
+    "typescript",
+  ]);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("tests/mongo_livedata_tests.js", ["client", "server"]);
