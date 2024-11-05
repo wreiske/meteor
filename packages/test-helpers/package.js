@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: "2.0.1",
+  version: "2.0.2-beta310.0",
 });
 
 Npm.depends({
