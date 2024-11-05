@@ -102,7 +102,9 @@ Package.onUse(function (api) {
   api.addFiles("remote_collection_driver.ts", "server");
   api.addFiles("collection/collection.js", ["client", "server"]);
   api.addFiles("connection_options.ts", "server");
-  // For zodern:types to pick up our published types
+  // For zodern:types to pick up our published types.
+  // Both the .d.ts file and package-types.json must be published
+  api.addAssets("mongo.d.ts", "server");
   api.addAssets("package-types.json", "server");
 });
 
