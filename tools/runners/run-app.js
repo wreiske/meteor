@@ -911,7 +911,7 @@ Object.assign(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        await refreshClient();
+        refreshClient();
 
         // Establish a watcher on the new files.
         setupClientWatcher();
