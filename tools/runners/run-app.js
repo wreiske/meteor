@@ -574,7 +574,7 @@ Object.assign(AppRunner.prototype, {
 
       if (self.recordPackageUsage) {
         // Maybe this doesn't need to be awaited for?
-        await stats.recordPackages({
+        stats.recordPackages({
           what: "sdk.run",
           projectContext: self.projectContext
         });
