@@ -10,8 +10,8 @@ var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
-import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
+import { eachline } from "../utils/eachline";
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -249,6 +249,8 @@ Object.assign(AppProcess.prototype, {
       // env.METEOR_INSPECT_BRK in that case.
       opts.push("--inspect=" + self.inspect.port);
     }
+
+    opts.push(`--require=${files.convertToOSPath(files.pathJoin(__dirname, '../node-process-warnings.js'))}`)
 
     opts.push(entryPoint);
 
