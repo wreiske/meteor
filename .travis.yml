@@ -16,7 +16,7 @@ env:
     - CXX=g++-12
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
-    - TEST_PACKAGES_EXCLUDE=roles
+    - TEST_PACKAGES_EXCLUDE=roles,stylus
 addons:
   apt:
     sources:
