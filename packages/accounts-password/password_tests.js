@@ -1896,4 +1896,32 @@ if (Meteor.isServer) (() => {
     test.equal(url.searchParams.get('test'), extraParams.test);
   });
 
+  Tinytest.addAsync('passwords - createUserAsync', async test => {
+    const username = Random.id();
+    const email = `${username}-intercept@example.com`;
+    const password = 'password';
+
+    const userId = await Accounts.createUserAsync({
+      username: username,
+      email: email,
+      password: password
+    });
+
+    test.isTrue(userId, 'User ID should be returned');
+    const user = await Meteor.users.findOneAsync(userId);
+    test.equal(user.username, username, 'Username should match');
+    test.equal(user.emails[0].address, email, 'Email should match');
+
+    Accounts.config({
+      ambiguousErrorMessages: false,
+    })
+
+    await test.throwsAsync(async () => {
+      await Accounts.createUserAsync({
+        username: username,
+        email: email,
+        password: password
+      });
+    }, 'already exists');
+  });
 })();

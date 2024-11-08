@@ -1074,17 +1074,7 @@ Accounts.createUserVerifyingEmail =
 // method calling Accounts.createUser could set?
 //
 
-Accounts.createUserAsync =
-  async (options, callback) => {
-    options = { ...options };
-
-    // XXX allow an optional callback?
-    if (callback) {
-      throw new Error("Accounts.createUser with callback not supported on the server yet.");
-    }
-
-    return createUser(options);
-  };
+Accounts.createUserAsync = createUser
 
 // Create user directly on the server.
 //
