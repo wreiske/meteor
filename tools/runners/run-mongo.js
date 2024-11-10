@@ -1,3 +1,4 @@
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import { MongoExitCodes } from '../utils/mongo-exit-codes';
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
@@ -5,7 +6,6 @@ var fiberHelpers = require('../utils/fiber-helpers.js');
 var runLog = require('./run-log.js');
 var child_process = require('child_process');
 var _ = require('underscore');
-import { loadIsopackage } from '../tool-env/isopackets.js';
 var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interactive Mongo shell on this terminal
@@ -51,11 +51,6 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
   }
 
-  // run with rosetta on mac m1
-  if (process.platform === 'darwin' && process.arch === 'arm64') {
-    args = ['-x86_64', mongodPath, ...args];
-    mongodPath = 'arch';
-  }
   return child_process.spawn(mongodPath, args, {
     // Apparently in some contexts, Mongo crashes if your locale isn't set up
     // right. I wasn't able to reproduce it, but many people on #4019
