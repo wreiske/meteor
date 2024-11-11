@@ -1,4 +1,4 @@
-import { RolesCollection, RoleAssignmentCollection } from 'packages/roles/roles_common_async'
+import { RolesCollection, RoleAssignmentCollection } from './roles_common_async';
 
 const indexFnAssignment = RoleAssignmentCollection.createIndexAsync.bind(RoleAssignmentCollection)
 const indexFnRoles = RolesCollection.createIndexAsync.bind(RolesCollection)
