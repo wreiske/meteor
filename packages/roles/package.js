@@ -27,18 +27,14 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  // Add code coverage
-  api.use([
-    "lmieulet:meteor-legacy-coverage",
-    "lmieulet:meteor-coverage@4.1.0 || 5.0.0",
-    "meteortesting:mocha@2.1.0 || 3.2.0",
-  ]);
-
   const both = ["client", "server"];
 
-  // `accounts-password` is included so `Meteor.users` exists
-
-  api.use(["ecmascript", "alanning:roles", "mongo"], both);
+  api.use([
+    "tinytest",
+    "ecmascript",
+    "mongo",
+    "roles"
+  ], both);
 
   api.addFiles("tests/serverAsync.js", "server");
   api.addFiles("tests/client.js", "client");

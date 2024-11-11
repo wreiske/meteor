@@ -9,7 +9,7 @@ cd $(dirname $0)/../..
 export METEOR_HOME=`pwd`
 
 # Installs into dev_bundle/lib/node_modules/puppeteer.
-./meteor npm install -g puppeteer@20.4.0
+./meteor npm install -g puppeteer@23.6.0
 
 export PATH=$METEOR_HOME:$PATH
 

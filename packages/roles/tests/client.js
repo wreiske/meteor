@@ -1,138 +1,152 @@
 /* eslint-env mocha */
 /* global Roles */
 
-import { Meteor } from 'meteor/meteor'
-import { assert } from 'chai'
+import { Meteor } from "meteor/meteor";
+import { Tinytest } from "meteor/tinytest";
 
 // To ensure that the files are loaded for coverage
-import 'packages/roles/roles_client'
+import "../roles_client";
 
 const safeInsert = (collection, data) => {
   try {
-    collection.insert(data)
+    collection.insert(data);
   } catch (e) {}
+};
+
+const roles = ["admin", "editor", "user"];
+const users = {
+  eve: {
+    _id: "eve",
+  },
+  bob: {
+    _id: "bob",
+  },
+  joe: {
+    _id: "joe",
+  },
+};
+
+function testUser(test, username, expectedRoles, scope) {
+  const user = users[username];
+
+  // test using user object rather than userId to avoid mocking
+  for (const role of roles) {
+    const expected = expectedRoles.includes(role);
+    const msg =
+      username + " expected to have '" + role + "' permission but does not";
+    const nmsg = username + " had un-expected permission " + role;
+
+    if (expected) {
+      test.isTrue(Roles.userIsInRole(user, role, scope), msg);
+    } else {
+      test.isFalse(Roles.userIsInRole(user, role, scope), nmsg);
+    }
+  }
 }
 
-describe('roles', function () {
-  const roles = ['admin', 'editor', 'user']
-  const users = {
-    eve: {
-      _id: 'eve'
-    },
-    bob: {
-      _id: 'bob'
-    },
-    joe: {
-      _id: 'joe'
-    }
-  }
+function setupRoles() {
+  safeInsert(Meteor.roleAssignment, {
+    user: users.eve,
+    role: { _id: "admin" },
+    inheritedRoles: [{ _id: "admin" }],
+  });
+  safeInsert(Meteor.roleAssignment, {
+    user: users.eve,
+    role: { _id: "editor" },
+    inheritedRoles: [{ _id: "editor" }],
+  });
 
-  function testUser (username, expectedRoles, scope) {
-    const user = users[username]
+  safeInsert(Meteor.roleAssignment, {
+    user: users.bob,
+    role: { _id: "user" },
+    inheritedRoles: [{ _id: "user" }],
+    scope: "group1",
+  });
+  safeInsert(Meteor.roleAssignment, {
+    user: users.bob,
+    role: { _id: "editor" },
+    inheritedRoles: [{ _id: "editor" }],
+    scope: "group2",
+  });
 
-    // test using user object rather than userId to avoid mocking
-    for (const role of roles) {
-      const expected = expectedRoles.includes(role)
-      const msg = username + ' expected to have \'' + role + '\' permission but does not'
-      const nmsg = username + ' had un-expected permission ' + role
+  safeInsert(Meteor.roleAssignment, {
+    user: users.joe,
+    role: { _id: "admin" },
+    inheritedRoles: [{ _id: "admin" }],
+  });
+  safeInsert(Meteor.roleAssignment, {
+    user: users.joe,
+    role: { _id: "editor" },
+    inheritedRoles: [{ _id: "editor" }],
+    scope: "group1",
+  });
+}
 
-      if (expected) {
-        assert.isTrue(Roles.userIsInRole(user, role, scope), msg)
-      } else {
-        assert.isFalse(Roles.userIsInRole(user, role, scope), nmsg)
-      }
-    }
-  }
-
-  let meteorUserMethod
-  before(() => {
-    meteorUserMethod = Meteor.user
-    // Mock Meteor.user() for isInRole handlebars helper testing
-    Meteor.user = function () {
-      return users.eve
-    }
-  })
-
-  after(() => {
-    Meteor.user = meteorUserMethod
-  })
-
-  beforeEach(() => {
-    safeInsert(Meteor.roleAssignment, {
-      user: users.eve,
-      role: { _id: 'admin' },
-      inheritedRoles: [{ _id: 'admin' }]
-    })
-    safeInsert(Meteor.roleAssignment, {
-      user: users.eve,
-      role: { _id: 'editor' },
-      inheritedRoles: [{ _id: 'editor' }]
-    })
-
-    safeInsert(Meteor.roleAssignment, {
-      user: users.bob,
-      role: { _id: 'user' },
-      inheritedRoles: [{ _id: 'user' }],
-      scope: 'group1'
-    })
-    safeInsert(Meteor.roleAssignment, {
-      user: users.bob,
-      role: { _id: 'editor' },
-      inheritedRoles: [{ _id: 'editor' }],
-      scope: 'group2'
-    })
-
-    safeInsert(Meteor.roleAssignment, {
-      user: users.joe,
-      role: { _id: 'admin' },
-      inheritedRoles: [{ _id: 'admin' }]
-    })
-    safeInsert(Meteor.roleAssignment, {
-      user: users.joe,
-      role: { _id: 'editor' },
-      inheritedRoles: [{ _id: 'editor' }],
-      scope: 'group1'
-    })
-  })
-
-  it('can check current users roles via template helper', function () {
-    let expected
-    let actual
-
+Tinytest.add(
+  "roles - can check current users roles via template helper",
+  (test) => {
     if (!Roles._handlebarsHelpers) {
       // probably running package tests outside of a Meteor app.
       // skip this test.
-      return
+      return;
     }
 
-    const isInRole = Roles._handlebarsHelpers.isInRole
-    assert.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
+    const meteorUserMethod = Meteor.user;
+    Meteor.user = function () {
+      return users.eve;
+    };
 
-    expected = true
-    actual = isInRole('admin, editor')
-    assert.equal(actual, expected)
+    setupRoles();
 
-    expected = true
-    actual = isInRole('admin')
-    assert.equal(actual, expected)
+    const isInRole = Roles._handlebarsHelpers.isInRole;
+    test.equal(typeof isInRole, "function", "'isInRole' helper not registered");
 
-    expected = false
-    actual = isInRole('unknown')
-    assert.equal(actual, expected)
-  })
+    test.equal(isInRole("admin, editor"), true);
+    test.equal(isInRole("admin"), true);
+    test.equal(isInRole("unknown"), false);
 
-  it('can check if user is in role', function () {
-    testUser('eve', ['admin', 'editor'])
-  })
+    Meteor.user = meteorUserMethod;
+  }
+);
 
-  it('can check if user is in role by group', function () {
-    testUser('bob', ['user'], 'group1')
-    testUser('bob', ['editor'], 'group2')
-  })
+Tinytest.add("roles - can check if user is in role", (test) => {
+  const meteorUserMethod = Meteor.user;
+  Meteor.user = function () {
+    return users.eve;
+  };
 
-  it('can check if user is in role with Roles.GLOBAL_GROUP', function () {
-    testUser('joe', ['admin'])
-    testUser('joe', ['admin'], Roles.GLOBAL_GROUP)
-    testUser('joe', ['admin', 'editor'], 'group1')
-  })
-})
+  setupRoles();
+  testUser(test, "eve", ["admin", "editor"]);
+
+  Meteor.user = meteorUserMethod;
+});
+
+Tinytest.add("roles - can check if user is in role by group", (test) => {
+  const meteorUserMethod = Meteor.user;
+  Meteor.user = function () {
+    return users.eve;
+  };
+
+  setupRoles();
+  testUser(test, "bob", ["user"], "group1");
+  testUser(test, "bob", ["editor"], "group2");
+
+  Meteor.user = meteorUserMethod;
+});
+
+Tinytest.add(
+  "roles - can check if user is in role with Roles.GLOBAL_GROUP",
+  (test) => {
+    const meteorUserMethod = Meteor.user;
+    Meteor.user = function () {
+      return users.eve;
+    };
+
+    setupRoles();
+    testUser(test, "joe", ["admin"]);
+    testUser(test, "joe", ["admin"], Roles.GLOBAL_GROUP);
+    testUser(test, "joe", ["admin", "editor"], "group1");
+
+    Meteor.user = meteorUserMethod;
+  }
+);
