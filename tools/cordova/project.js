@@ -463,6 +463,8 @@ to Cordova project`, async () => {
       let platformSpec = version ? `${platform}@${version}` : platform;
       await cordova_lib.platform('add', platformSpec, this.defaultOptions);
 
+      const installedPlugins = this.listInstalledPluginVersions();
+
       // As per Npm 8, we need now do inject a package.json file
       // with the dependencies so that when running any npm command
       // it keeps the dependencies installed.
@@ -482,10 +484,11 @@ to Cordova project`, async () => {
 
       const packageJsonObj = Object.entries(packages).reduce((acc, [key, value]) => {
         const name = getPackageName(key);
+        const originalPluginVersion = installedPlugins[name];
         return ({
           dependencies: {
             ...acc.dependencies,
-            [name]: value.version,
+            [name]: originalPluginVersion || value.version,
           }
         });
       }, { dependencies: { [`cordova-${platform}`]: version  } });
