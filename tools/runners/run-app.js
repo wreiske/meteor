@@ -576,7 +576,7 @@ Object.assign(AppRunner.prototype, {
 
       if (self.recordPackageUsage) {
         // Maybe this doesn't need to be awaited for?
-        await stats.recordPackages({
+        stats.recordPackages({
           what: "sdk.run",
           projectContext: self.projectContext
         });
@@ -913,7 +913,7 @@ Object.assign(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        await refreshClient();
+        refreshClient();
 
         // Establish a watcher on the new files.
         setupClientWatcher();
