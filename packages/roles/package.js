@@ -4,6 +4,7 @@ Package.describe({
   summary: "Authorization package for Meteor",
   version: "1.0.0-rc310.0",
   name: "roles",
+  documentation: null,
 });
 
 Package.onUse(function (api) {
