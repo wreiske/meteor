@@ -7,7 +7,6 @@ try {
   URL = window.URL;
   exports.URL = URL;
 } catch (e) {
-  console.log(' error', e);
   throw new Error([
     "The core-js npm package could not be found in your node_modules ",
     "directory. Please run the following command to install it:",
