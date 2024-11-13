@@ -4,7 +4,7 @@ try {
   exports.URLSearchParams = URLSearchParams;
 
   require("core-js/proposals/url");
-  URL = window.URLSearchParams;
+  URL = window.URL;
   exports.URL = URL;
 } catch (e) {
   console.log(' error', e);
