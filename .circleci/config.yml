@@ -767,19 +767,17 @@ jobs:
               PR_BRANCH=$(curl -s https://api.github.com/repos/meteor/meteor/pulls/$PR_NUMBER | jq -r .head.ref)
               git clone https://github.com/meteor/meteor.git
               cd meteor
-              echo "Cloning pull/$PR_NUMBER/head:$PR_BRANCH"
               git fetch origin pull/$PR_NUMBER/head:$PR_BRANCH
             else
               git clone https://github.com/meteor/meteor.git
               cd meteor
-              echo "Cloning pull/$CIRCLE_PR_NUMBER/head:pr-$CIRCLE_PR_NUMBER"
               git fetch origin pull/$CIRCLE_PR_NUMBER/head:pr-$CIRCLE_PR_NUMBER
             fi
       # Run almost the same steps the meteor/docs repository runs, minus deploy.
       - run:
           name: Generating Meteor documentation for JSDoc testing
           command: |
-            cd ${CHECKOUT_METEOR_DOCS}/docs
+            cd docs
             npm install
             npm test
 
