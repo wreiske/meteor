@@ -777,8 +777,7 @@ jobs:
       - run:
           name: Generating Meteor documentation for JSDoc testing
           command: |
-            ls 
-            cd docs
+            cd meteor/docs
             npm install
             npm test
 
