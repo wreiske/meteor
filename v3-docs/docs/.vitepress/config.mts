@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import metadata from "../generators/meteor-versions/metadata.generated";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -127,6 +128,22 @@ export default defineConfig({
       },
       { text: "API", link: "/api/" },
       { text: "Galaxy Cloud", link: "https://www.meteor.com/cloud" },
+      {
+        text: metadata.currentVersion,
+        items: metadata.versions.reverse().map((v) => {
+          if (v.isCurrent) {
+            return {
+              text: `${v.version} (Current)`,
+              link: "/",
+              activeMatch: "/",
+            };
+          }
+          return {
+            text: v.version,
+            link: v.url,
+          };
+        }),
+      },
     ],
     sidebar: [
       {
