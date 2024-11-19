@@ -10,6 +10,7 @@ exports.generateMeteorVersions = async () => {
   const versions = files
     .filter((f) => f !== "99999-generated-code-warning.md")
     .map((f) => f.replace(".md", ""))
+    .filter((v) => v !== "3.0.1") // there is no 3.0.1 version
     .map((version) => {
       return {
         version: `v${version}`,
