@@ -6,7 +6,8 @@ Package.describe({
 });
 
 Npm.depends({
-  "core-js": "3.38.1"
+  "core-js": "3.39.0",
+  "url-search-params-polyfill": "8.2.5",
 });
 
 Package.onUse(function(api) {
