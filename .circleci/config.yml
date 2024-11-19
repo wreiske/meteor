@@ -769,9 +769,7 @@ jobs:
               cd meteor
               git fetch origin pull/$PR_NUMBER/head:$PR_BRANCH
             else
-              git clone https://github.com/meteor/meteor.git
-              cd meteor
-              git fetch origin pull/$CIRCLE_PR_NUMBER/head:pr-$CIRCLE_PR_NUMBER
+              git clone --branch $CIRCLE_BRANCH https://github.com/meteor/meteor.git ${CHECKOUT_METEOR_DOCS}
             fi
       # Run almost the same steps the meteor/docs repository runs, minus deploy.
       - run:
