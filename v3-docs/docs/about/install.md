@@ -9,7 +9,6 @@ npx meteor
 
 ## Prerequisites {#prereqs}
 
-
 ### Operating System (OS) {#prereqs-os}
 
 - Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
@@ -23,7 +22,6 @@ npx meteor
 ### Mobile Development {#prereqs-mobile}
 
 - iOS development requires the latest Xcode.
-
 
 ## Installation
 
