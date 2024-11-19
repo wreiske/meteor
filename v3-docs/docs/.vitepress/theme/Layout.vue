@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NotFound from './NotFound.vue'
+import GoToLatest from './GoToLatest.vue'
 import { useData, useRouter } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import { nextTick, provide } from 'vue'
@@ -48,12 +49,17 @@ provide('toggle-appearance', async ({ clientX: x, clientY: y }: MouseEvent) => {
     }
   )
 })
+
+const inLatestDeployedDoc = () => window.location.href.startsWith("https://docs.meteor.com/")
 </script>
 
 <template>
-  <DefaultTheme.Layout >
+  <DefaultTheme.Layout>
     <template #not-found>
       <NotFound />
+    </template>
+    <template #doc-before v-if="!inLatestDeployedDoc()">
+      <GoToLatest />
     </template>
   </DefaultTheme.Layout>
 </template>
