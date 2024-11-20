@@ -10,8 +10,8 @@ if (typeof window !== 'undefined') watch(() => router.route.path, (path) =>
 </script>
 
 <template>
-  <div class="tip custom-block">
-    <p class="custom-block-title">TIP</p>
+  <div class="warning custom-block">
+    <p class="custom-block-title">Warning</p>
     <p>You are viewing an old version of the Meteor documentation. Click <a v-bind:href="url">here</a> to
       go to the latest version.</p>
   </div>
