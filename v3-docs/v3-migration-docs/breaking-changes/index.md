@@ -339,7 +339,7 @@ function patchPublish(publish: typeof Meteor.publish) {
 
 This example demonstrates the migration applied to the [`universe:i18n` package](https://github.com/vazco/meteor-universe-i18n/pull/191).
 
-## mongodb driver 6
+## Mongo driver
 
 In Meteor 3, the MongoDB driver has been updated to version 6.x. This version removes callbacks for async operations, replacing them with standard promises. If you use rawCollection or rawDatabase, ensure your code is updated to use promises.
 
