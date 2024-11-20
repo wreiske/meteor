@@ -1,7 +1,8 @@
 const _fs = require("fs");
 const fs = _fs.promises;
 
-const getDocsUrl = (version = "") => `https://${version}docs.meteor.com/`;
+const getDocsUrl = (version = "") =>
+  `https://release-${version}.docs.meteor.com/`;
 
 exports.generateMeteorVersions = async () => {
   console.log("Reading meteor versions...");
@@ -11,10 +12,11 @@ exports.generateMeteorVersions = async () => {
     .filter((f) => f !== "99999-generated-code-warning.md")
     .map((f) => f.replace(".md", ""))
     .filter((v) => v !== "3.0.1") // there is no 3.0.1 version
+    .map((v) => (v.endsWith(".0") ? v.slice(0, -2) : v)) // remove .0 from versions
     .map((version) => {
       return {
         version: `v${version}`,
-        url: getDocsUrl(`${version.replaceAll(".", "-")}-`),
+        url: getDocsUrl(`${version}`),
       };
     })
     .map((v, index, arr) => {
