@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: "2.0.3",
+  version: "2.0.4",
 });
 
 Npm.depends({
   "cookie-parser": "1.4.6",
-  express: "4.21.1",
-  "@types/express": "4.17.21",
+  express: "5.0.1",
+  "@types/express": "5.0.0",
   compression: "1.7.4",
   errorhandler: "1.5.1",
   parseurl: "1.3.3",
@@ -31,14 +31,13 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.use(
     [
-      "logging",
-      "underscore",
-      "routepolicy",
-      "modern-browsers",
-      "boilerplate-generator",
-      "webapp-hashing",
-      "inter-process-messaging",
-      "callback-hook",
+      'logging',
+      'routepolicy',
+      'modern-browsers',
+      'boilerplate-generator',
+      'webapp-hashing',
+      'inter-process-messaging',
+      'callback-hook',
     ],
     "server"
   );
@@ -66,7 +65,6 @@ Package.onTest(function (api) {
     "ecmascript",
     "webapp",
     "http",
-    "underscore",
     "fetch",
     "test-helpers",
   ]);
