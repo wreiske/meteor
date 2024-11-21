@@ -45,7 +45,6 @@
 ### [callback-hook](https://github.com/meteor/meteor/tree/devel/packages/callback-hook) {#callback-hook}
 ### [check](https://github.com/meteor/meteor/tree/devel/packages/check) {#check}
 ### [constraint-solver](https://github.com/meteor/meteor/tree/devel/packages/constraint-solver) {#constraint-solver}
-### [context](https://github.com/meteor/meteor/tree/devel/packages/context) {#context}
 ### [core-runtime](https://github.com/meteor/meteor/tree/devel/packages/core-runtime) {#core-runtime}
 ### [crosswalk](https://github.com/meteor/meteor/tree/devel/packages/crosswalk) {#crosswalk}
 ### [ddp](https://github.com/meteor/meteor/tree/devel/packages/ddp) {#ddp}
@@ -134,6 +133,7 @@
 ### [standard-minifier-js](https://github.com/meteor/meteor/tree/devel/packages/standard-minifier-js) {#standard-minifier-js}
 ### [standard-minifiers](https://github.com/meteor/meteor/tree/devel/packages/standard-minifiers) {#standard-minifiers}
 ### [static-html](https://github.com/meteor/meteor/tree/devel/packages/static-html) {#static-html}
+### [static-html-tools](https://github.com/meteor/meteor/tree/devel/packages/static-html-tools) {#static-html-tools}
 ### [test-helpers](https://github.com/meteor/meteor/tree/devel/packages/test-helpers) {#test-helpers}
 ### [test-in-browser](https://github.com/meteor/meteor/tree/devel/packages/test-in-browser) {#test-in-browser}
 ### [test-in-console](https://github.com/meteor/meteor/tree/devel/packages/test-in-console) {#test-in-console}
