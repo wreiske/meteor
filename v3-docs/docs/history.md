@@ -44,7 +44,7 @@ Please run the following command to update your project:
 
 ```bash
 
-meteor update --release 3.1.0
+meteor update --release 3.1
 
 ```
 
