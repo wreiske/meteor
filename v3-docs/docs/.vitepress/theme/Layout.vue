@@ -3,7 +3,7 @@ import NotFound from './NotFound.vue'
 import GoToLatest from './GoToLatest.vue'
 import { useData, useRouter } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
-import { nextTick, provide } from 'vue'
+import { nextTick, onMounted, provide, ref } from 'vue'
 import { redirect } from './redirects/script';
 const { isDark } = useData()
 const router = useRouter()
@@ -50,7 +50,13 @@ provide('toggle-appearance', async ({ clientX: x, clientY: y }: MouseEvent) => {
   )
 })
 
-const inLatestDeployedDoc = () => isClient && window.location.href.startsWith("https://docs.meteor.com/")
+
+const shouldShowGoToLatest = ref(false);
+
+onMounted(() => {
+  shouldShowGoToLatest.value = isClient && window.location.href.startsWith("https://docs.meteor.com/")
+});
+
 </script>
 
 <template>
@@ -58,7 +64,7 @@ const inLatestDeployedDoc = () => isClient && window.location.href.startsWith("h
     <template #not-found>
       <NotFound />
     </template>
-    <template #doc-before v-if="!inLatestDeployedDoc()">
+    <template #doc-before v-if="!shouldShowGoToLatest">
       <GoToLatest />
     </template>
   </DefaultTheme.Layout>
