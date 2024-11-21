@@ -9,14 +9,14 @@ exports.generateMeteorVersions = async () => {
   const files = await fs.readdir("./generators/changelog/versions", "utf8");
 
   const versions = files
-    .filter((f) => f !== "99999-generated-code-warning.md")
+    .filter((f) => f.startsWith("3."))
     .map((f) => f.replace(".md", ""))
     .filter((v) => v !== "3.0.1") // there is no 3.0.1 version
-    .map((v) => (v.endsWith(".0") ? v.slice(0, -2) : v)) // remove .0 from versions
+    .map((v) => (v === "3.0.0" ? v.slice(0, -2) : v)) // 3.0 doesn't have a patch version in the URL
     .map((version) => {
       return {
         version: `v${version}`,
-        url: getDocsUrl(`${version}`),
+        url: getDocsUrl(`${version}`.replaceAll(".", "-")),
       };
     })
     .map((v, index, arr) => {
