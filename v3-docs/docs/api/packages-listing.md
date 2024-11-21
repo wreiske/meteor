@@ -45,6 +45,7 @@
 ### [callback-hook](https://github.com/meteor/meteor/tree/devel/packages/callback-hook) {#callback-hook}
 ### [check](https://github.com/meteor/meteor/tree/devel/packages/check) {#check}
 ### [constraint-solver](https://github.com/meteor/meteor/tree/devel/packages/constraint-solver) {#constraint-solver}
+### [context](https://github.com/meteor/meteor/tree/devel/packages/context) {#context}
 ### [core-runtime](https://github.com/meteor/meteor/tree/devel/packages/core-runtime) {#core-runtime}
 ### [crosswalk](https://github.com/meteor/meteor/tree/devel/packages/crosswalk) {#crosswalk}
 ### [ddp](https://github.com/meteor/meteor/tree/devel/packages/ddp) {#ddp}
@@ -122,6 +123,7 @@
 ### [reload](https://github.com/meteor/meteor/tree/devel/packages/reload) {#reload}
 ### [reload-safetybelt](https://github.com/meteor/meteor/tree/devel/packages/reload-safetybelt) {#reload-safetybelt}
 ### [retry](https://github.com/meteor/meteor/tree/devel/packages/retry) {#retry}
+### [roles](https://github.com/meteor/meteor/tree/devel/packages/roles) {#roles}
 ### [routepolicy](https://github.com/meteor/meteor/tree/devel/packages/routepolicy) {#routepolicy}
 ### [server-render](https://github.com/meteor/meteor/tree/devel/packages/server-render) {#server-render}
 ### [service-configuration](https://github.com/meteor/meteor/tree/devel/packages/service-configuration) {#service-configuration}
