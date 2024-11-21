@@ -51,10 +51,10 @@ provide('toggle-appearance', async ({ clientX: x, clientY: y }: MouseEvent) => {
 })
 
 
-const shouldShowGoToLatest = ref(false);
+const isLatestVersion = ref(false);
 
 onMounted(() => {
-  shouldShowGoToLatest.value = isClient && window.location.href.startsWith("https://docs.meteor.com/")
+  isLatestVersion.value = isClient && window.location.href.startsWith("https://docs.meteor.com/")
 });
 
 </script>
@@ -64,7 +64,7 @@ onMounted(() => {
     <template #not-found>
       <NotFound />
     </template>
-    <template #doc-before v-if="!shouldShowGoToLatest">
+    <template #doc-before v-if="!isLatestVersion">
       <GoToLatest />
     </template>
   </DefaultTheme.Layout>
