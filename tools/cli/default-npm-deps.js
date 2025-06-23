@@ -6,19 +6,7 @@ import {
   unlink,
 } from "../fs/files";
 
-// Check if pnpm is available in the system
-function isPnpmAvailable() {
-  try {
-    const which = require("which");
-    which.sync("pnpm");
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-const INSTALL_JOB_MESSAGE_NPM = "installing npm dependencies";
-const INSTALL_JOB_MESSAGE_PNPM = "installing pnpm dependencies";
+const INSTALL_JOB_MESSAGE = "installing npm dependencies";
 
 export async function install(appDir, options) {
   const packageJsonPath = pathJoin(appDir, "package.json");
@@ -37,29 +25,18 @@ export async function install(appDir, options) {
     );
   }
 
-  // Check if pnpm is available and prefer it over npm
-  const usePnpm = isPnpmAvailable();
-  const installMessage = usePnpm ? INSTALL_JOB_MESSAGE_PNPM : INSTALL_JOB_MESSAGE_NPM;
-
-  const ok = await buildmessage.enterJob(installMessage, async function () {
-    const installCommand = ["install"];
+  const ok = await buildmessage.enterJob(INSTALL_JOB_MESSAGE, async function () {
+    const npmCommand = ["install"];
     if (options && options.includeDevDependencies) {
-      installCommand.push("--production=false");
+      npmCommand.push("--production=false");
     }
 
-    let installResult;
-    if (usePnpm) {
-      const { runPnpmCommand } = require("../isobuild/meteor-npm.js");
-      installResult = await runPnpmCommand(installCommand, appDir);
-    } else {
-      const { runNpmCommand } = require("../isobuild/meteor-npm.js");
-      installResult = await runNpmCommand(installCommand, appDir);
-    }
+    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
+    const installResult = await runNpmCommand(npmCommand, appDir);
 
     if (! installResult.success) {
-      const packageManager = usePnpm ? "pnpm" : "npm";
       buildmessage.error(
-        `Could not install ${packageManager} dependencies for test-packages: ` +
+        "Could not install npm dependencies for test-packages: " +
           installResult.error);
 
       return false;

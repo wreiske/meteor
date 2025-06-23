@@ -1028,6 +1028,9 @@ binary dependencies.
 
 > **Note**: You must have pnpm installed separately on your system to use
 > `meteor pnpm` commands. Unlike npm, pnpm is not bundled with Meteor.
+> Additionally, `meteor create` will always use npm for initial dependency
+> installation - use `meteor pnpm` commands manually after project creation
+> for pnpm-specific workflows.
 
 <h2 id="meteornode">meteor node</h2>
 
