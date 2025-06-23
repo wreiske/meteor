@@ -3336,16 +3336,26 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 // A test command to print a progressbar. Useful for manual testing.
+// Enhanced to showcase new cli-progress features
 main.registerCommand({
   name: 'admin progressbar-test',
   options: {
     secs: { type: Number, default: 20 },
-    spinner: { type: Boolean, default: false }
+    spinner: { type: Boolean, default: false },
+    'no-color': { type: Boolean, default: false }
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
-  await buildmessage.enterJob({ title: "A test progressbar" }, async function () {
+  // Temporarily set NO_COLOR if requested for testing
+  const originalNoColor = process.env.METEOR_NO_COLOR;
+  if (options['no-color']) {
+    process.env.METEOR_NO_COLOR = '1';
+  }
+  
+  const taskTitle = options.spinner ? "🌀 Testing spinner animation" : "🚀 Testing enhanced progress bar";
+  
+  await buildmessage.enterJob({ title: taskTitle }, async function () {
 
     var progress = buildmessage.getCurrentProgressTracker();
     var totalProgress = { current: 0, end: options.secs, done: false };
@@ -3376,6 +3386,120 @@ main.registerCommand({
       setTimeout(updateProgress);
     })
   });
+  
+  // Restore original NO_COLOR setting
+  if (originalNoColor !== undefined) {
+    process.env.METEOR_NO_COLOR = originalNoColor;
+  } else {
+    delete process.env.METEOR_NO_COLOR;
+  }
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// admin multibar-test  
+///////////////////////////////////////////////////////////////////////////////
+
+// A test command to demonstrate multi-bar progress. Useful for manual testing.
+main.registerCommand({
+  name: 'admin multibar-test',
+  options: {
+    packages: { type: Number, default: 4 },
+    secs: { type: Number, default: 10 },
+    'no-color': { type: Boolean, default: false }
+  },
+  hidden: true,
+  pretty: true,  // Enable pretty output for progress bars
+  catalogRefresh: new catalog.Refresh.Never()
+}, async function (options) {
+  // Temporarily set NO_COLOR if requested for testing
+  const originalNoColor = process.env.METEOR_NO_COLOR;
+  const originalForceColor = process.env.METEOR_FORCE_COLOR;
+  
+  if (options['no-color']) {
+    process.env.METEOR_NO_COLOR = '1';
+  } else {
+    // Allow multi-bar testing even in CI environments
+    process.env.METEOR_FORCE_COLOR = '1';
+  }
+  
+  const packageCount = Math.max(2, Math.min(10, options.packages));
+  const duration = Math.max(3, options.secs);
+  
+  // Create fake package names for testing
+  const packageNames = [
+    'react-dom', 'lodash', 'axios', 'express', 
+    'moment', 'chalk', 'commander', 'inquirer',
+    'semver', 'fs-extra'
+  ].slice(0, packageCount);
+  
+  Console.info(`🚀 Testing multi-bar progress with ${packageCount} packages over ${duration} seconds`);
+  
+  await buildmessage.enterJob({
+    title: `downloading ${packageCount} packages`,
+    forkJoin: true  // Enable multi-bar progress
+  }, async function () {
+    const parentProgress = buildmessage.getCurrentProgressTracker();
+    
+    // Create child tasks manually for better control over titles
+    const childTasks = packageNames.map(packageName => {
+      return parentProgress.addChildTask({
+        title: `${packageName}@1.0.0`,
+        forkJoin: false
+      });
+    });
+    
+    // Process tasks in parallel
+    const promises = childTasks.map(async (childProgress, index) => {
+      const packageName = packageNames[index];
+      const totalBytes = Math.floor(Math.random() * 1000000) + 500000; // Random size 500KB-1.5MB
+      const totalProgress = { current: 0, end: totalBytes, done: false };
+      
+      // Initialize progress tracking immediately
+      childProgress.reportProgress(totalProgress);
+      
+      const stepCount = Math.floor(Math.random() * duration * 2) + duration; // Variable download speeds
+      const bytesPerStep = totalBytes / stepCount;
+      let currentBytes = 0;
+      
+      await new Promise(function (resolve) {
+        function updateProgress() {
+          currentBytes += bytesPerStep;
+          
+          if (currentBytes >= totalBytes) {
+            totalProgress.current = totalBytes;
+            totalProgress.done = true;
+            childProgress.reportProgress(totalProgress);
+            resolve();
+          } else {
+            totalProgress.current = Math.floor(currentBytes);
+            childProgress.reportProgress(totalProgress);
+            setTimeout(updateProgress, Math.random() * 1000 + 200); // Random timing
+          }
+        }
+        
+        setTimeout(updateProgress, Math.random() * 500); // Staggered start
+      });
+    });
+    
+    // Wait for all tasks to complete
+    await Promise.all(promises);
+  });
+  
+  Console.info("✅ Multi-bar progress test completed!");
+  
+  // Restore original NO_COLOR setting
+  if (originalNoColor !== undefined) {
+    process.env.METEOR_NO_COLOR = originalNoColor;
+  } else {
+    delete process.env.METEOR_NO_COLOR;
+  }
+  
+  if (originalForceColor !== undefined) {
+    process.env.METEOR_FORCE_COLOR = originalForceColor;
+  } else {
+    delete process.env.METEOR_FORCE_COLOR;
+  }
 });
 
 

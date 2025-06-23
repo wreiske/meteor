@@ -600,13 +600,19 @@ Object.assign(exports.Tropohouse.prototype, {
       return;
     }
 
-    // Download multiple packages in parallel.
-    // XXX use a better progress bar that shows how many you've
-    // finished downloading.
+    // Download multiple packages in parallel with individual progress bars.
     await buildmessage.enterJob({
       title: 'downloading ' + downloaders.length + ' packages',
+      forkJoin: true  // Enable multi-bar progress
     }, async function () {
-      return await Promise.all(downloaders.map(d => d.download()));
+      // Create individual download tasks for each package
+      return await buildmessage.forkJoin(downloaders, async (downloader) => {
+        await buildmessage.enterJob({
+          title: `${downloader.packageName}@${downloader.version}`
+        }, async function () {
+          await downloader.download();
+        });
+      });
     });
   },
 

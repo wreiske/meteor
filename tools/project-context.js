@@ -1003,7 +1003,10 @@ Object.assign(ProjectContext.prototype, {
           ? null : self._forceRebuildPackages);
     }
 
-    await buildmessage.enterJob('building local packages', async function () {
+    await buildmessage.enterJob({
+      title: 'building local packages',
+      forkJoin: true  // Enable multi-bar progress for package building
+    }, async function () {
       return await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;

@@ -166,8 +166,8 @@ class Runner {
 
     // print the banner only once we've successfully bound the port
     if (! self.quiet && ! self.stopped) {
-      runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
-      runLog.log("Started proxy.",  { arrow: true });
+      runLog.logBanner(self.banner);
+      runLog.logStartup("Started proxy.", { emoji: "🔗" });
     }
 
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
@@ -199,14 +199,14 @@ class Runner {
       self.hmrServer.start();
 
       if (!self.quiet && !self.stopped) {
-        runLog.log("Started HMR server.", { arrow: true });
+        runLog.logStartup("Started HMR server.", { emoji: "🔥" });
       }
     }
 
     if (! self.stopped) {
       await buildmessage.enterJob({ title: "starting your app" }, () => self.appRunner.start());
       if (! self.quiet && ! self.stopped) {
-        runLog.log("Started your app.",  { arrow: true });
+        runLog.logStartup("Started your app.", { emoji: "🚀" });
       }
     }
 
@@ -218,7 +218,7 @@ class Runner {
           { arrow: true }
         );
       } else {
-        runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+        runLog.logStartup("App running at: " + self.rootUrl, { emoji: "🌍" });
       }
 
       if (process.platform === "win32") {
@@ -232,7 +232,7 @@ class Runner {
         return await self.selenium.start();
       });
       if (! self.quiet && ! self.stopped) {
-        runLog.log("Started Selenium.", { arrow: true });
+        runLog.logStartup("Started Selenium.", { emoji: "🧪" });
       }
     }
 
@@ -246,7 +246,7 @@ class Runner {
     if (! this.stopped && this.mongoRunner) {
       await this.mongoRunner.start();
       if (! this.stopped && ! this.quiet) {
-        runLog.log("Started MongoDB.", { arrow: true });
+        runLog.logStartup("Started MongoDB.", { emoji: "🍃" });
       }
     }
   }
