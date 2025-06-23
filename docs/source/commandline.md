@@ -1009,6 +1009,26 @@ because doing so ensures that they are built using the same libraries.
 Additionally, this access to the npm that comes with Meteor avoids the need to
 download and install npm separately.
 
+<h2 id="meteorpnpm">meteor pnpm</h2>
+
+The `meteor pnpm` command provides support for
+[`pnpm`](https://pnpm.io/) as an alternative package manager to npm.
+
+Like `meteor npm`, additional parameters can be passed in the same way as the `pnpm` command
+(e.g. `meteor pnpm install`, `meteor pnpm ls`, etc.) and the
+[pnpm documentation](https://pnpm.io/cli/add) should be consulted for the
+full list of commands and for a better understanding of their usage.
+
+For example, executing `meteor pnpm install lodash` would install `lodash`
+using pnpm to your `node_modules` directory.
+
+Using `meteor pnpm ...` commands ensures that pnpm uses the same Node.js
+environment as Meteor, which is particularly important for packages with
+binary dependencies.
+
+> **Note**: You must have pnpm installed separately on your system to use
+> `meteor pnpm` commands. Unlike npm, pnpm is not bundled with Meteor.
+
 <h2 id="meteornode">meteor node</h2>
 
 The `meteor node` command calls the
