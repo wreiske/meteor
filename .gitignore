@@ -18,6 +18,7 @@ node_modules
 *.sublime-project
 *.sublime-workspace
 /.vscode/
+/test-*
 TAGS
 *.log
 *.out

@@ -21,6 +21,7 @@ type ProgressState = {
 export class Progress {
   public readonly title?: string;
   public readonly startTime = Date.now();
+  public readonly taskId: string;
 
   private parent: Progress | null;
   private allTasks: Progress[] = [];
@@ -39,6 +40,9 @@ export class Progress {
       // Capitalize job titles when displayed in the progress bar.
       this.title = this.title[0].toUpperCase() + this.title.slice(1);
     }
+
+    // Multi-bar support: generate unique task ID
+    this.taskId = Math.random().toString(36).substring(2, 15);
   }
 
   toString() {
@@ -116,7 +120,7 @@ export class Progress {
 
   // Dumps the tree, for debug
   dump(
-    stream: NodeJS.WriteStream,
+    stream: any,
     options?: { skipDone: boolean },
     prefix?: string,
   ) {
@@ -144,8 +148,8 @@ export class Progress {
     this.updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    const { Console } = require("./console.js");
-
+    // Use eval to avoid TypeScript issues with require in strict mode
+    const Console = eval('require("./console.js")').Console;
     Console.nudge();
 
     this.notifyState();
@@ -197,8 +201,10 @@ export class Progress {
       state.done = false;
     }
 
-    if (!state.done && this.state.done) {
-      // This shouldn't happen
+    // Allow state transitions from done => !done for forkJoin tasks with multi-bar
+    // This can happen when new child tasks are added dynamically
+    if (!state.done && this.state.done && !this.forkJoin) {
+      // This shouldn't happen for non-forkJoin tasks
       throw new Error("Progress transition from done => !done");
     }
 
@@ -213,5 +219,117 @@ export class Progress {
 
   getState() {
     return this.state;
+  }
+
+  // Check if this progress task should use multi-bar display
+  shouldUseMultiBar(): boolean {
+    // Use multi-bar if:
+    // 1. This is a fork-join task with multiple children that have progress
+    // 2. The children have meaningful titles
+    // 3. There are at least 2 children with progress tracking
+    if (!this.forkJoin || this.allTasks.length < 2) {
+      return false;
+    }
+
+    const childrenWithProgress = this.allTasks.filter(task => 
+      task.title && 
+      (task.state.end !== undefined && task.state.end > 0) &&
+      !task.isDone
+    );
+
+    // Debug logging
+    if (process.env.METEOR_PROGRESS_DEBUG) {
+      console.log(`[DEBUG] shouldUseMultiBar: forkJoin=${this.forkJoin}, allTasks=${this.allTasks.length}, childrenWithProgress=${childrenWithProgress.length}`);
+      this.allTasks.forEach((task, i) => {
+        console.log(`[DEBUG] Task ${i}: title="${task.title}", end=${task.state.end}, isDone=${task.isDone}`);
+      });
+    }
+
+    return childrenWithProgress.length >= 2;
+  }
+
+  // Get children that should be displayed as individual progress bars
+  getMultiBarChildren(): Progress[] {
+    if (!this.shouldUseMultiBar()) {
+      return [];
+    }
+
+    return this.allTasks.filter(task => 
+      task.title && 
+      (task.state.end !== undefined && task.state.end > 0)
+    );
+  }
+
+  // Enable multi-bar progress tracking for this task's children
+  enableMultiBarProgress() {
+    if (!this.shouldUseMultiBar()) {
+      if (process.env.METEOR_PROGRESS_DEBUG) {
+        console.log('[DEBUG] enableMultiBarProgress: shouldUseMultiBar returned false');
+      }
+      return;
+    }
+
+    if (process.env.METEOR_PROGRESS_DEBUG) {
+      console.log('[DEBUG] enableMultiBarProgress: Attempting to enable multi-bar progress');
+    }
+
+    // Use eval to avoid TypeScript issues with require in strict mode
+    try {
+      const consoleModule = eval('require("./console.js")');
+      const Console = consoleModule.Console;
+      Console.nudge();
+      
+      if (process.env.METEOR_PROGRESS_DEBUG) {
+        console.log('[DEBUG] enableMultiBarProgress: Console loaded, _progressDisplay:', !!Console._progressDisplay);
+        console.log('[DEBUG] enableMultiBarProgress: Console state - _progressDisplayEnabled:', Console._progressDisplayEnabled, '_pretty:', Console._pretty, '_stream.isTTY:', Console._stream.isTTY);
+        console.log('[DEBUG] enableMultiBarProgress: process.stdout.isTTY:', process.stdout.isTTY);
+      }
+      
+      const progressDisplay = Console._progressDisplay;
+      if (!progressDisplay || !progressDisplay.addProgressBar) {
+        if (process.env.METEOR_PROGRESS_DEBUG) {
+          console.log('[DEBUG] enableMultiBarProgress: No progressDisplay or addProgressBar method, display type:', progressDisplay?.constructor?.name);
+        }
+        return;
+      }
+
+      const children = this.getMultiBarChildren();
+      
+      if (process.env.METEOR_PROGRESS_DEBUG) {
+        console.log('[DEBUG] enableMultiBarProgress: Found', children.length, 'children for multi-bar');
+      }
+      
+      // Initialize multi-bar for each child
+      children.forEach(child => {
+        if (child.title && child.state.end) {
+          if (process.env.METEOR_PROGRESS_DEBUG) {
+            console.log('[DEBUG] enableMultiBarProgress: Adding progress bar for', child.title);
+          }
+          
+          progressDisplay.addProgressBar(child.taskId, child.title, child.state.end);
+          
+          // Add watcher to update the progress bar
+          child.addWatcher((state) => {
+            if (state.end && state.end > 0) {
+              progressDisplay.updateProgressBar(
+                child.taskId, 
+                state.current, 
+                state.end, 
+                child.title
+              );
+              
+              if (state.done) {
+                progressDisplay.completeProgressBar(child.taskId);
+              }
+            }
+          });
+        }
+      });
+    } catch (error) {
+      // Fallback to regular progress if there are issues
+      if (process.env.METEOR_PROGRESS_DEBUG) {
+        console.log('[DEBUG] enableMultiBarProgress error:', error.message);
+      }
+    }
   }
 }

@@ -1,6 +1,9 @@
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 
+// Check for no-color environment variables (same logic as console.js)
+const NO_COLOR = !!(process.env.NO_COLOR || process.env.METEOR_NO_COLOR || process.env.CI);
+
 // runLog is primarily used by the parts of the tool which run apps locally. It
 // writes to standard output (and standard error, if rawLogs is set), and allows
 // special output forms like "write this line, but let the next line overwrite
@@ -128,6 +131,40 @@ Object.assign(RunLog.prototype, {
     Console[options.arrow ? 'arrowInfo' : 'info'](msg);
   },
 
+  // Enhanced logging with emojis and colors for startup messages
+  // Maintains backward compatibility with standard arrow logging
+  logStartup: function (msg, options) {
+    var self = this;
+    options = options || {};
+    
+    // Check if we should use enhanced output (colors enabled and TTY-like environment)
+    const useEnhanced = !NO_COLOR && (process.stdout.isTTY !== false) && options.emoji;
+    
+    if (useEnhanced) {
+      const enhancedMsg = options.emoji + " " + msg;
+      self.log(enhancedMsg, { arrow: true });
+    } else {
+      // Fallback to standard arrow logging
+      self.log(msg, { arrow: true });
+    }
+  },
+
+  // Enhanced banner display for project startup
+  logBanner: function (banner) {
+    var self = this;
+    
+    // Check if we should use enhanced output (colors enabled and TTY-like environment)
+    const useEnhanced = !NO_COLOR && (process.stdout.isTTY !== false);
+    
+    if (useEnhanced) {
+      // Enhanced colorful banner with emojis
+      self.log("🚀 [[[[[ " + banner + " ]]]]] 🚀\n");
+    } else {
+      // Fallback to standard banner
+      self.log("[[[[[ " + banner + " ]]]]]\n");
+    }
+  },
+
   // Write a message to the terminal that will get overwritten by the
   // next message logged. (Don't put it in the log that getLog
   // returns.)
@@ -221,7 +258,7 @@ Object.assign(RunLog.prototype, {
 // object you get with require('./run-log.js').
 var runLogInstance = new RunLog;
 ['log', 'logTemporary', 'logRestart', 'logClientRestart', 'logAppOutput',
-  'setRawLogs', 'finish', 'clearLog', 'getLog'].forEach(
+  'setRawLogs', 'finish', 'clearLog', 'getLog', 'logStartup', 'logBanner'].forEach(
   function (method) {
     exports[method] = runLogInstance[method].bind(runLogInstance);
   });

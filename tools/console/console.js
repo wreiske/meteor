@@ -77,10 +77,15 @@ const CARRIAGE_RETURN = process.platform === 'win32' &&
 const FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT &&
   process.env.METEOR_PRETTY_OUTPUT != '0';
 
+// Check for no-color environment variables
+const NO_COLOR = !!(process.env.NO_COLOR || process.env.METEOR_NO_COLOR || process.env.CI);
+
 const STATUS_MAX_LENGTH = 40;
 
 const PROGRESS_MAX_WIDTH = 40;
-const PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
+const PROGRESS_BAR_FORMAT = NO_COLOR 
+  ? '[:bar] :percent | ETA: :etas'
+  : '🚀 [:bar] :percent | ETA: :etas';
 const TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
 const STATUS_INTERVAL_MS = 50;
@@ -199,9 +204,19 @@ class ProgressDisplayStatus {
 
 class SpinnerRenderer {
   constructor() {
-    this.frames = ['-', '\\', '|', '/'];
     this.start = +(new Date);
     this.interval = 250;
+    
+    // Use enhanced Unicode spinners when colors are supported
+    if (!NO_COLOR && process.stdout.isTTY) {
+      // Colorful moon phases spinner
+      this.frames = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+      this.interval = 200;
+    } else {
+      // Fallback to simple ASCII frames for compatibility
+      this.frames = ['-', '\\', '|', '/'];
+    }
+    
     //// I looked at some Unicode indeterminate progress indicators, such as:
     ////
     //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
@@ -228,7 +243,7 @@ class SpinnerRenderer {
   }
 }
 
-// Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
+// Renders a progressbar.  Enhanced with cli-progress for better visual experience
 class ProgressBarRenderer {
   constructor(format, options) {
     options = options || Object.create(null);
@@ -237,10 +252,48 @@ class ProgressBarRenderer {
     this.curr = 0;
     this.total = 100;
     this.maxWidth = options.maxWidth || this.total;
-    this.chars = {
-      complete   : '=',
-      incomplete : ' '
-    };
+    
+    // Use cli-progress for enhanced visuals when colors are supported
+    this.useCliProgress = !NO_COLOR && process.stdout.isTTY;
+    
+    if (this.useCliProgress) {
+      try {
+        const cliProgress = require('cli-progress');
+        
+        // Enhanced format with emojis and colors
+        const enhancedFormat = NO_COLOR 
+          ? '[:bar] :percent | :current/:total | ETA: :etas'
+          : '🚀 [\u001b[36m:bar\u001b[0m] \u001b[32m:percent\u001b[0m | :current/:total | ETA: :etas';
+        
+        this.cliBar = new cliProgress.SingleBar({
+          format: enhancedFormat,
+          barCompleteChar: '\u2588',
+          barIncompleteChar: '\u2591',
+          hideCursor: true,
+          clearOnComplete: false,
+          stopOnComplete: true,
+          barsize: Math.min(30, this.maxWidth - 30), // Leave space for other elements
+          etaBuffer: 10
+        }, cliProgress.Presets.rect);
+        
+        this.chars = {
+          complete: '\u2588',
+          incomplete: '\u2591'
+        };
+      } catch (err) {
+        // Fallback if cli-progress is not available
+        this.useCliProgress = false;
+        this.chars = {
+          complete: '=',
+          incomplete: ' '
+        };
+      }
+    } else {
+      this.chars = {
+        complete: '=',
+        incomplete: ' '
+      };
+    }
   }
 
   asString(availableSpace) {
@@ -250,14 +303,26 @@ class ProgressBarRenderer {
     var percent = ratio * 100;
     var incomplete, complete, completeLength;
     var elapsed = new Date - this.start;
-    var eta = (percent == 100) ? 0 : elapsed * (this.total / this.curr - 1);
+    var eta;
+    
+    // Improved ETA calculation to handle edge cases
+    if (percent >= 100) {
+      eta = 0;
+    } else if (this.curr <= 0 || elapsed <= 0) {
+      eta = 0; // No progress yet, can't estimate
+    } else {
+      eta = (elapsed * (this.total - this.curr)) / this.curr;
+      // Cap ETA to reasonable maximum (e.g., 10 minutes)
+      if (eta > 600000) eta = 600000;
+    }
 
     /* populate the bar template with percentages and timestamps */
     var str = this.fmt
       .replace(':current', this.curr)
       .replace(':total', this.total)
       .replace(':elapsed', isNaN(elapsed) ? '0.0' : (elapsed / 1000).toFixed(1))
-      .replace(':eta', (isNaN(eta) || ! isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
+      .replace(':eta', (isNaN(eta) || !isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
+      .replace(':etas', (isNaN(eta) || !isFinite(eta)) ? '0s' : (eta / 1000).toFixed(1) + 's')
       .replace(':percent', percent.toFixed(0) + '%');
 
     /* compute the available space (non-zero) for the bar */
@@ -306,11 +371,192 @@ class ProgressDisplayFull {
     this._lastWrittenLine = null;
     this._lastWrittenTime = 0;
     this._renderTimeout = null;
+
+    // Multi-bar progress support
+    this._multiBarMode = false;
+    this._multiBar = null;
+    this._activeBars = new Map(); // Map of progress task ID to cli-progress bar
+    this._multiBarTasks = new Map(); // Map of task ID to task info
   }
 
   depaint() {
     this._clearDelayedRender();
+    if (this._multiBarMode && this._multiBar) {
+      this._multiBar.stop();
+      this._multiBar = null;
+      this._multiBarMode = false;
+      this._activeBars.clear();
+      this._multiBarTasks.clear();
+    }
     this._stream.write(spacesString(this._printedLength) + CARRIAGE_RETURN);
+  }
+
+  // Initialize multi-bar mode for parallel progress tracking
+  _initMultiBar() {
+    // Allow multi-bar in CI for testing purposes, but respect explicit --no-color
+    const allowColors = !process.env.METEOR_NO_COLOR && !process.env.NO_COLOR;
+    
+    if (this._multiBarMode || (!allowColors && !process.env.METEOR_FORCE_COLOR) || !process.stdout.isTTY) {
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _initMultiBar: Skipping - multiBarMode:', this._multiBarMode, 'allowColors:', allowColors, 'isTTY:', process.stdout.isTTY);
+      }
+      return;
+    }
+
+    if (PROGRESS_DEBUG) {
+      console.log('[DEBUG] _initMultiBar: Attempting to initialize multi-bar');
+    }
+
+    try {
+      const cliProgress = require('cli-progress');
+      
+      // Enhanced format for multi-bar display
+      const multiBarFormat = (!allowColors && !process.env.METEOR_FORCE_COLOR)
+        ? ' {bar} | {filename} | {value}/{total} | ETA: {eta}s'
+        : ' 🚀 [\u001b[36m{bar}\u001b[0m] | \u001b[32m{filename}\u001b[0m | {value}/{total} | ETA: {eta}s';
+
+      this._multiBar = new cliProgress.MultiBar({
+        clearOnComplete: false,
+        hideCursor: true,
+        format: multiBarFormat,
+        barCompleteChar: '\u2588',
+        barIncompleteChar: '\u2591',
+        barsize: 20,
+        stopOnComplete: false,
+        forceRedraw: true,
+        etaBuffer: 5, // Smaller buffer for more responsive ETA
+        formatValue: function(v, options, type) {
+          // Custom ETA formatting to handle NaN/Infinity
+          if (type === 'eta') {
+            if (v === null || v === undefined || isNaN(v) || !isFinite(v) || v === 'NULL' || v === Infinity || v < 0) {
+              return 0;
+            }
+            return Math.round(Math.max(0, Math.min(v, 600))); // Cap ETA to 10 minutes
+          }
+          return cliProgress.Format.ValueFormat(v, options, type);
+        }
+      }, cliProgress.Presets.rect);
+
+      this._multiBarMode = true;
+      
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _initMultiBar: Multi-bar initialized successfully');
+      }
+    } catch (err) {
+      // Fallback if cli-progress is not available
+      this._multiBarMode = false;
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _initMultiBar: Failed to initialize multi-bar:', err.message);
+      }
+    }
+  }
+
+  // Add a new progress bar for a specific task
+  addProgressBar(taskId, title, total = 100) {
+    if (PROGRESS_DEBUG) {
+      console.log('[DEBUG] addProgressBar: taskId:', taskId, 'title:', title, 'total:', total);
+    }
+    
+    if (!this._multiBarMode) {
+      this._initMultiBar();
+    }
+
+    if (this._multiBar && !this._activeBars.has(taskId)) {
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] addProgressBar: Creating bar for', title);
+      }
+      
+      const bar = this._multiBar.create(total, 0, {
+        filename: title || 'Task'
+      });
+      this._activeBars.set(taskId, bar);
+      this._multiBarTasks.set(taskId, {
+        title: title,
+        total: total,
+        current: 0,
+        startTime: Date.now()
+      });
+      
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] addProgressBar: Active bars count:', this._activeBars.size);
+      }
+    } else {
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] addProgressBar: Skipped - multiBar:', !!this._multiBar, 'hasTaskId:', this._activeBars.has(taskId));
+      }
+    }
+  }
+
+  // Update progress for a specific task
+  updateProgressBar(taskId, current, total, title) {
+    const bar = this._activeBars.get(taskId);
+    if (bar) {
+      const taskInfo = this._multiBarTasks.get(taskId);
+      if (taskInfo) {
+        taskInfo.current = current;
+        if (total !== undefined) {
+          taskInfo.total = total;
+        }
+        if (title !== undefined) {
+          taskInfo.title = title;
+        }
+      }
+      
+      bar.update(current, {
+        filename: title || taskInfo?.title || 'Task'
+      });
+    }
+  }
+
+  // Complete and remove a progress bar for a specific task
+  completeProgressBar(taskId) {
+    const bar = this._activeBars.get(taskId);
+    const taskInfo = this._multiBarTasks.get(taskId);
+    
+    if (bar && taskInfo) {
+      bar.update(taskInfo.total, {
+        filename: taskInfo.title || 'Task'
+      });
+      // Don't remove immediately, let it show completion briefly
+      setTimeout(() => {
+        this._activeBars.delete(taskId);
+        this._multiBarTasks.delete(taskId);
+        
+        // If no more active bars, exit multi-bar mode
+        if (this._activeBars.size === 0 && this._multiBar) {
+          this._multiBar.stop();
+          this._multiBar = null;
+          this._multiBarMode = false;
+        }
+      }, 500);
+    }
+  }
+
+  // Calculate ETA safely, handling edge cases
+  _calculateSafeETA(current, total, startTime) {
+    if (!current || !total || !startTime || current <= 0 || total <= 0) {
+      return 0;
+    }
+    
+    const elapsed = Date.now() - startTime;
+    if (elapsed <= 0) {
+      return 0;
+    }
+    
+    const progress = current / total;
+    if (progress >= 1) {
+      return 0;
+    }
+    
+    const eta = (elapsed * (1 - progress)) / progress;
+    
+    // Cap ETA to reasonable maximum (10 minutes) and minimum (0)
+    return Math.max(0, Math.min(eta / 1000, 600));
+  }
+
+  // Check if currently in multi-bar mode
+  isMultiBarMode() {
+    return this._multiBarMode && this._activeBars.size > 0;
   }
 
   updateStatus(status) {
@@ -359,6 +605,18 @@ class ProgressDisplayFull {
   _render() {
     if (this._rerenderTimeout) {
       this._clearDelayedRender();
+    }
+
+    // If in multi-bar mode, don't render single progress bars
+    if (this.isMultiBarMode()) {
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _render: In multi-bar mode, skipping single progress rendering');
+      }
+      return;
+    }
+
+    if (PROGRESS_DEBUG) {
+      console.log('[DEBUG] _render: Not in multi-bar mode, active bars:', this._activeBars.size);
     }
 
     // XXX: Or maybe just jump to the correct position?
@@ -494,6 +752,61 @@ class StatusPoller {
     };
 
     var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
+
+    // Check if the current progress should use multi-bar display
+    if (watching && watching.shouldUseMultiBar && watching.shouldUseMultiBar()) {
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] StatusPoller: Multi-bar conditions met, enabling multi-bar progress');
+      }
+      
+      // Enable multi-bar progress directly in the console display
+      var progressDisplay = this._console._progressDisplay;
+      if (progressDisplay && progressDisplay.addProgressBar) {
+        const children = watching.getMultiBarChildren();
+        
+        if (PROGRESS_DEBUG) {
+          console.log('[DEBUG] StatusPoller: Found', children.length, 'children for multi-bar');
+        }
+        
+        // Initialize multi-bar for each child
+        children.forEach(child => {
+          if (child.title && child.state.end) {
+            if (PROGRESS_DEBUG) {
+              console.log('[DEBUG] StatusPoller: Adding progress bar for', child.title);
+            }
+            
+            progressDisplay.addProgressBar(child.taskId, child.title, child.state.end);
+            
+            // Add watcher to update the progress bar
+            child.addWatcher((state) => {
+              if (state.end && state.end > 0) {
+                progressDisplay.updateProgressBar(
+                  child.taskId, 
+                  state.current, 
+                  state.end, 
+                  child.title
+                );
+                
+                if (state.done) {
+                  progressDisplay.completeProgressBar(child.taskId);
+                }
+              }
+            });
+          }
+        });
+      } else {
+        if (PROGRESS_DEBUG) {
+          console.log('[DEBUG] StatusPoller: No progressDisplay or addProgressBar method available');
+        }
+      }
+      
+      // Update status to show the parent task title
+      var title = watching.title || FALLBACK_STATUS;
+      progressDisplay.updateStatus && progressDisplay.updateStatus(title);
+      
+      this._watching = watching;
+      return;
+    }
 
     if (this._watching === watching) {
       // We need to do this to keep the spinner spinning
@@ -1207,18 +1520,34 @@ class Console extends ConsoleBase {
   _updateProgressDisplay() {
     var newProgressDisplay;
 
+    if (PROGRESS_DEBUG) {
+      console.log('[DEBUG] _updateProgressDisplay: _progressDisplayEnabled:', this._progressDisplayEnabled, '_stream.isTTY:', this._stream.isTTY, '_pretty:', this._pretty, 'process.stdout.isTTY:', process.stdout.isTTY);
+    }
+
     if (! this._progressDisplayEnabled) {
       newProgressDisplay = new ProgressDisplayNone();
-    } else if ((! this._stream.isTTY) || (! this._pretty)) {
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _updateProgressDisplay: Using ProgressDisplayNone (not enabled)');
+      }
+    } else if ((! this._stream.isTTY && ! process.stdout.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(this);
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _updateProgressDisplay: Using ProgressDisplayNone (not TTY or not pretty)');
+      }
     } else if (isEmacs() || this.isPseudoTTY()) {
       // Resort to a more basic mode if we're in an environment which
       // misbehaves when using clearLine() and cursorTo(...).
       newProgressDisplay = new ProgressDisplayStatus(this);
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _updateProgressDisplay: Using ProgressDisplayStatus (Emacs or pseudo TTY)');
+      }
     } else {
       // Otherwise we can do the full progress bar
       newProgressDisplay = new ProgressDisplayFull(this);
+      if (PROGRESS_DEBUG) {
+        console.log('[DEBUG] _updateProgressDisplay: Using ProgressDisplayFull');
+      }
     }
 
     // Start/stop the status poller, so we never block exit

@@ -177,7 +177,6 @@ var _updateServerPackageData = async function (dataStore, options) {
       compressCollections: compress
     });
 
-
     // Is the remote server telling us to ignore everything we've heard before?
     // OK, we can do that.
     if (remoteData.resetData) {
