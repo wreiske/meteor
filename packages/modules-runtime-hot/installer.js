@@ -453,8 +453,9 @@ makeInstaller = function (options) {
     var extensions = file.options
       && file.options.extensions
       || defaultExtensions;
-    // Freeze to prevent mutations and enable safe sharing across modules
-    return Object.isFrozen(extensions) ? extensions : Object.freeze(extensions.slice(0));
+    // Freeze to prevent mutations and enable safe sharing across modules.
+    // If already frozen, return as-is for performance.
+    return Object.isFrozen(extensions) ? extensions : Object.freeze(extensions.slice());
   }
 
   function fileAppendIdPart(file, part, extensions) {
