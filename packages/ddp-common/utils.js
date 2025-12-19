@@ -77,6 +77,11 @@ DDPCommon.parseDDP = function (stringMessage) {
 };
 
 DDPCommon.stringifyDDP = function (msg) {
+  // Validate id early to avoid duplication
+  if (msg.id && typeof msg.id !== 'string') {
+    throw new Error("Message id is not a string");
+  }
+
   // Optimize by avoiding unnecessary cloning. Most DDP messages (ping, pong,
   // ready, etc.) have no fields/params/result and don't need any cloning.
   // Only create a copy when we actually need to mutate something.
@@ -86,9 +91,6 @@ DDPCommon.stringifyDDP = function (msg) {
 
   if (!hasFields && !hasParams && !hasResult) {
     // Fast path: no mutation needed, stringify directly
-    if (msg.id && typeof msg.id !== 'string') {
-      throw new Error("Message id is not a string");
-    }
     return JSON.stringify(msg);
   }
 
@@ -124,15 +126,11 @@ DDPCommon.stringifyDDP = function (msg) {
 
   // adjust types to basic for params and result
   ['params', 'result'].forEach(field => {
-    if (hasOwn.call(copy, field)) {
-      // Clone before adjusting since _adjustTypesToJSONValue mutates in-place
-      copy[field] = EJSON._adjustTypesToJSONValue(EJSON.clone(copy[field]));
+    if (hasOwn.call(msg, field)) {
+      // Clone from original msg to avoid any aliasing issues
+      copy[field] = EJSON._adjustTypesToJSONValue(EJSON.clone(msg[field]));
     }
   });
-
-  if (msg.id && typeof msg.id !== 'string') {
-    throw new Error("Message id is not a string");
-  }
 
   return JSON.stringify(copy);
 };
