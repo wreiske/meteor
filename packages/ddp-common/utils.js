@@ -77,19 +77,36 @@ DDPCommon.parseDDP = function (stringMessage) {
 };
 
 DDPCommon.stringifyDDP = function (msg) {
-  const copy = EJSON.clone(msg);
+  // Optimize by avoiding unnecessary cloning. Most DDP messages (ping, pong,
+  // ready, etc.) have no fields/params/result and don't need any cloning.
+  // Only create a copy when we actually need to mutate something.
+  const hasFields = hasOwn.call(msg, 'fields');
+  const hasParams = hasOwn.call(msg, 'params');
+  const hasResult = hasOwn.call(msg, 'result');
+
+  if (!hasFields && !hasParams && !hasResult) {
+    // Fast path: no mutation needed, stringify directly
+    if (msg.id && typeof msg.id !== 'string') {
+      throw new Error("Message id is not a string");
+    }
+    return JSON.stringify(msg);
+  }
+
+  // Slow path: shallow copy message, deep clone only the fields we'll mutate
+  const copy = { ...msg };
 
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
-  if (hasOwn.call(msg, 'fields')) {
+  if (hasFields) {
     const cleared = [];
+    const fieldsClone = EJSON.clone(msg.fields);
 
     Object.keys(msg.fields).forEach(key => {
       const value = msg.fields[key];
 
       if (typeof value === "undefined") {
         cleared.push(key);
-        delete copy.fields[key];
+        delete fieldsClone[key];
       }
     });
 
@@ -97,15 +114,19 @@ DDPCommon.stringifyDDP = function (msg) {
       copy.cleared = cleared;
     }
 
-    if (isEmpty(copy.fields)) {
+    if (isEmpty(fieldsClone)) {
       delete copy.fields;
+    } else {
+      // Adjust types on the cloned fields (mutates in-place)
+      copy.fields = EJSON._adjustTypesToJSONValue(fieldsClone);
     }
   }
 
-  // adjust types to basic
-  ['fields', 'params', 'result'].forEach(field => {
+  // adjust types to basic for params and result
+  ['params', 'result'].forEach(field => {
     if (hasOwn.call(copy, field)) {
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
+      // Clone before adjusting since _adjustTypesToJSONValue mutates in-place
+      copy[field] = EJSON._adjustTypesToJSONValue(EJSON.clone(copy[field]));
     }
   });
 
