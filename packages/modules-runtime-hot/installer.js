@@ -5,7 +5,8 @@ makeInstaller = function (options) {
 
   // These file extensions will be appended to required module identifiers
   // if they do not exactly match an installed module.
-  var defaultExtensions = options.extensions || [".js", ".json"];
+  // Frozen to prevent mutations and enable safe sharing across modules.
+  var defaultExtensions = Object.freeze(options.extensions || [".js", ".json"]);
 
   // If defined, the options.fallback function will be called when no
   // installed module is found for a required module identifier. Often
@@ -449,9 +450,11 @@ makeInstaller = function (options) {
   }
 
   function fileGetExtensions(file) {
-    return file.options
+    var extensions = file.options
       && file.options.extensions
       || defaultExtensions;
+    // Freeze to prevent mutations and enable safe sharing across modules
+    return Object.isFrozen(extensions) ? extensions : Object.freeze(extensions.slice(0));
   }
 
   function fileAppendIdPart(file, part, extensions) {
