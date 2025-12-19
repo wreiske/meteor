@@ -283,7 +283,7 @@ makeInstaller = function (options) {
       return module.require(id);
     }
 
-    require.extensions = fileGetExtensions(file).slice(0);
+    require.extensions = fileGetExtensions(file);
 
     require.resolve = function resolve(id) {
       return module.resolve(id);
