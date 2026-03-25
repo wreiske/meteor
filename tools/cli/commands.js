@@ -751,6 +751,7 @@ main.registerCommand({
     legacy: { type: Boolean },
     prototype: { type: Boolean },
     from: { type: String },
+    'from-template': { type: String },
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
@@ -915,6 +916,66 @@ main.registerCommand({
       "To create an example, simply",
       Console.command("'meteor create <app-name> --example <name>'")
     );
+    return 0;
+  }
+
+  if (options['from-template']) {
+    const template = options['from-template'];
+
+    // Accept "owner/repo" or "https://github.com/owner/repo"
+    let owner, repo;
+    const ghUrlMatch = template.match(
+      /^https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/
+    );
+    const shorthandMatch = template.match(/^([\w.-]+)\/([\w.-]+)$/);
+
+    if (ghUrlMatch) {
+      owner = ghUrlMatch[1];
+      repo = ghUrlMatch[2];
+    } else if (shorthandMatch) {
+      owner = shorthandMatch[1];
+      repo = shorthandMatch[2];
+    } else {
+      Console.error(
+        `Invalid template format: ${Console.command(template)}`
+      );
+      Console.error(
+        'Expected format: ' +
+        Console.command('owner/repo') +
+        ' or ' +
+        Console.command('https://github.com/owner/repo')
+      );
+      return 1;
+    }
+
+    // Use provided app name or default to the repo name
+    var appPathAsEntered = options.args[0] || repo;
+    var appPath = files.pathResolve(appPathAsEntered);
+
+    if (files.findAppDir(appPath)) {
+      Console.error(
+        "You can't create a Meteor project inside another Meteor project."
+      );
+      return 1;
+    }
+
+    Console.info(`Verifying that ${owner}/${repo} is a Meteor project...`);
+    const { exists, skipped } = await verifyGitHubMeteorRepo(owner, repo);
+
+    if (!exists) {
+      Console.error(
+        `The repository ${Console.command(`${owner}/${repo}`)} does not ` +
+        `appear to be a Meteor project (no .meteor folder found).`
+      );
+      return 1;
+    }
+
+    if (!skipped) {
+      Console.info(`Verified! .meteor folder found in ${owner}/${repo}.`);
+    }
+
+    const url = `https://github.com/${owner}/${repo}`;
+    await setupExampleByURL(url);
     return 0;
   }
 
@@ -1152,10 +1213,49 @@ main.registerCommand({
   }
 
   /**
+   * Verify that a GitHub repository contains a .meteor folder.
+   * @param {string} owner - GitHub username or org
+   * @param {string} repo - Repository name
+   * @returns {Promise<{exists: boolean, skipped: boolean}>}
+   */
+  async function verifyGitHubMeteorRepo(owner, repo) {
+    const apiUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/.meteor`;
+    try {
+      const response = await httpHelpers.request({
+        url: apiUrl,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'MeteorTool',
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+      const statusCode = response.response.statusCode;
+      if (statusCode === 200) {
+        return { exists: true, skipped: false };
+      }
+      if (statusCode === 404) {
+        return { exists: false, skipped: false };
+      }
+      // Rate limited or other issue — warn but don't block
+      Console.warn(
+        `Could not verify .meteor folder (HTTP ${statusCode}). ` +
+        `Proceeding with clone anyway.`
+      );
+      return { exists: true, skipped: true };
+    } catch (e) {
+      Console.warn(
+        `Could not verify .meteor folder: ${e.message}. ` +
+        `Proceeding with clone anyway.`
+      );
+      return { exists: true, skipped: true };
+    }
+  }
+
+  /**
    *
    * @param {string} url
    */
-  const setupExampleByURL = async (url) => {
+  async function setupExampleByURL(url) {
     const [ok, err] = await bash`git --version`;
     if (err) throw new Error("git is not installed");
     const isWindows = process.platform === "win32";
@@ -1174,7 +1274,7 @@ main.registerCommand({
     // remove .git folder from the example
     await files.rm_recursive_async(files.pathJoin(appPath, ".git"));
     await setupMessages();
-  };
+  }
 
   if (options.example) {
     const [json, err] = await getExamplesJSON();
