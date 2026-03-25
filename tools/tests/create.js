@@ -50,6 +50,72 @@ selftest.define("create main", async function () {
   await run.expectExit(0);
 });
 
+selftest.define("create --from-template invalid format", async function () {
+  var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
+  await s.init();
+
+  // Invalid format (no slash)
+  var run = s.run("create", "--from-template", "invalidformat", "testapp");
+  await run.matchErr("Invalid template format");
+  await run.matchErr("owner/repo");
+  await run.expectExit(1);
+});
+
+selftest.define("create --from-template non-meteor repo", ["net"], async function () {
+  var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
+  await s.init();
+
+  // A well-known repo on GitHub that does NOT have a .meteor folder
+  var run = s.run("create", "--from-template", "expressjs/express", "testapp");
+  run.waitSecs(30);
+  await run.match("Verifying");
+  await run.matchErr("does not appear to be a Meteor project");
+  await run.expectExit(1);
+});
+
+selftest.define("create --from-template success", ["net", "slow"], async function () {
+  var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
+  await s.init();
+
+  // Use one of Meteor's own skeleton repos (small, known to have .meteor)
+  var run = s.run("create", "--from-template", "meteor/skel-react", "myapp");
+  run.waitSecs(60);
+  await run.match("Verifying");
+  await run.match("Verified");
+  await run.match("Created a new Meteor app in 'myapp'");
+  await run.expectExit(0);
+
+  // Verify .meteor folder exists in the created app
+  s.cd("myapp");
+  const packages = s.read(".meteor/packages");
+  if (!packages) {
+    selftest.fail("Expected .meteor/packages to exist in cloned template");
+  }
+});
+
+selftest.define("create --from-template full github url", async function () {
+  var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
+  await s.init();
+
+  // Invalid full URL (not github)
+  var run = s.run("create", "--from-template", "https://gitlab.com/foo/bar", "testapp");
+  await run.matchErr("Invalid template format");
+  await run.expectExit(1);
+});
+
+selftest.define("create --from-template defaults app name to repo", ["net", "slow"], async function () {
+  var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
+  await s.init();
+
+  // No app name argument — should default to the repo name
+  var run = s.run("create", "--from-template", "meteor/skel-react");
+  run.waitSecs(60);
+  await run.match("Verifying");
+  await run.match("Verified");
+  await run.match("Created a new Meteor app in 'skel-react'");
+  await run.expectExit(0);
+});
+
 // TODO: Enable once rspack is published for the first time
 // Also, the new modern test suite covers more than this test.
 // This test may not work, as rspack relies on project npm dependencies
