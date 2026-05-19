@@ -18,6 +18,7 @@ import Resolver from "./resolver";
 import {optimisticHashOrNull, optimisticStatOrNull,} from "../fs/optimistic";
 
 import {isTestFilePath} from './test-files.js';
+const bundlerCachePruner = require('./bundler-cache-pruner.js');
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -109,6 +110,7 @@ export class CompilerPluginProcessor {
     linkerCacheDir,
     scannerCacheDir,
     minifyCssResource,
+    activeLinkerPrefixes,
   }) {
     Object.assign(this, {
       unibuilds,
@@ -128,6 +130,14 @@ export class CompilerPluginProcessor {
     if (scannerCacheDir) {
       files.mkdir_p(scannerCacheDir);
     }
+
+    // Linker cache key prefixes seen during this bundle. Populated by
+    // PackageSourceBatch._linkJS and consumed by the bundler-cache pruner
+    // to identify orphaned linker entries that the prefix-wildcard cleanup
+    // in `_linkJS` cannot reach (e.g. after a package is renamed/removed).
+    // If the caller (Target) provided a shared Set, use that so prefixes
+    // are aggregated across all targets/arches in a single bundle.
+    this.activeLinkerPrefixes = activeLinkerPrefixes || new Set();
   }
 
   async runCompilerPlugins() {
@@ -1748,6 +1758,12 @@ export class PackageSourceBatch {
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
     await onCacheKey(cacheKey, jsResources);
 
+    // Record that this prefix is live so the bundler-cache pruner won't
+    // mistake an in-use linker entry for an orphan.
+    if (self.processor && self.processor.activeLinkerPrefixes) {
+      self.processor.activeLinkerPrefixes.add(cacheKeyPrefix);
+    }
+
     if (LINKER_CACHE.has(cacheKey)) {
       if (CACHE_DEBUG) {
         console.log('LINKER IN-MEMORY CACHE HIT:',
@@ -1787,6 +1803,9 @@ export class PackageSourceBatch {
         if (CACHE_DEBUG) {
           console.log('LINKER DISK CACHE HIT:', linkerOptions.name, bundleArch);
         }
+        // Bump mtime so the bundler-cache pruner treats this entry as
+        // recently used and won't evict it under LRU/TTL pressure.
+        bundlerCachePruner.touchFile(cacheFilename);
         // Add the bufferized value of diskCached to the in-memory LRU cache
         // so we don't have to go to disk next time.
         LINKER_CACHE.set(cacheKey, diskCached);

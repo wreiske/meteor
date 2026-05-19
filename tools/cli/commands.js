@@ -1871,6 +1871,7 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     db: { type: Boolean },
+    cache: { type: Boolean },
     'skip-cache': { type: Boolean },
   },
   requiresApp: true,
@@ -1878,6 +1879,10 @@ main.registerCommand({
 }, async function (options) {
   if (options.args.length !== 0) {
     Console.error("'meteor reset' command only affects the local project cache.");
+    Console.error();
+    Console.error("To clear only build caches (preserves local database) use");
+    Console.error(
+      Console.command("meteor reset --cache"), Console.options({ indent: 2 }));
     Console.error();
     Console.error("To remove also the local database use");
     Console.error(
@@ -1916,6 +1921,32 @@ main.registerCommand({
   const resetRspackPromises = rspackAppContexts.map((contextPath) => files.rm_recursive_async(
     contextPath
   ));
+
+  if (options.cache) {
+    // Clear only build caches; preserve the local database and other
+    // non-cache state (e.g. dev_bundle, run state).
+    const cacheSubdirs = [
+      'bundler-cache',
+      'plugin-cache',
+      'build',
+      'isopacks',
+    ];
+    const cacheRemovePromises = [];
+    for (const localRelative of localDirs) {
+      for (const sub of cacheSubdirs) {
+        cacheRemovePromises.push(files.rm_recursive_async(
+          files.pathJoin(options.appDir, localRelative, sub)
+        ));
+      }
+    }
+    await Promise.all([
+      ...cacheRemovePromises,
+      resetMeteorNpmCachePromise,
+      ...resetRspackPromises,
+    ]);
+    Console.info("Build caches cleared. Local database preserved.");
+    return;
+  }
 
   if (options.db) {
     // XXX detect the case where Meteor is running the app, but

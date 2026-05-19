@@ -169,6 +169,8 @@ var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
+const bundlerCachePruner = require('./bundler-cache-pruner.js');
+import { Console } from '../console/console.js';
 import { PackageRegistry } from "../../packages/core-runtime/package-registry.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
 
@@ -782,6 +784,10 @@ class Target {
     buildMode,
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir,
+    // Optional shared Set used to collect the linker `cacheKeyPrefix`
+    // values seen during this build. Used by the bundler-cache pruner to
+    // identify orphaned linker entries. May be undefined.
+    activeLinkerPrefixes,
     // ... see subclasses for additional options
   }) {
     this.packageMap = packageMap;
@@ -830,6 +836,7 @@ class Target {
     this.buildMode = buildMode || 'production';
 
     this.bundlerCacheDir = bundlerCacheDir;
+    this.activeLinkerPrefixes = activeLinkerPrefixes;
   }
 
   // Top-level entry point for building a target. Generally to build a
@@ -1117,6 +1124,7 @@ class Target {
       isopackCache: this.isopackCache,
       linkerCacheDir,
       scannerCacheDir,
+      activeLinkerPrefixes: this.activeLinkerPrefixes,
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
@@ -3328,6 +3336,11 @@ async function bundle({
   const bundlerCacheDir =
       projectContext.getProjectLocalDirectory('bundler-cache');
 
+  // Shared across every Target (client + legacy + server + cordova) so the
+  // bundler-cache pruner can see the union of linker cacheKeyPrefix values
+  // and avoid evicting entries that are still in use.
+  const activeLinkerPrefixes = new Set();
+
   if (! release.usingRightReleaseForApp(projectContext)) {
     throw new Error("running wrong release for app?");
   }
@@ -3346,6 +3359,7 @@ async function bundle({
       "bundler.bundle..makeClientTarget", async function (app, webArch, options) {
       var client = new ClientTarget({
         bundlerCacheDir,
+        activeLinkerPrefixes,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
@@ -3370,6 +3384,7 @@ async function bundle({
       "bundler.bundle..makeServerTarget", async function (app, clientArchs) {
       const server = new ServerTarget({
         bundlerCacheDir,
+        activeLinkerPrefixes,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
@@ -3554,6 +3569,35 @@ async function bundle({
   if (success && messages.hasMessages()) {
     // there were errors
     success = false;
+  }
+
+  // Best-effort: keep `.meteor/local/bundler-cache` from growing unbounded.
+  // This runs asynchronously and never blocks the build. It is internally
+  // throttled to at most one sweep per cooldown window per process. If the
+  // cache is over the warning threshold we emit a one-time notice.
+  if (success && bundlerCacheDir) {
+    Promise.resolve(
+      bundlerCachePruner.maybePruneBundlerCache({
+        bundlerCacheDir,
+        activeLinkerPrefixes,
+      })
+    ).then(() => {
+      try {
+        const bytes = bundlerCachePruner.getDirectorySize(bundlerCacheDir);
+        if (bundlerCachePruner.shouldWarnAboutSize(bytes)) {
+          Console.warn(
+            "Your .meteor/local/bundler-cache is " +
+            bundlerCachePruner.formatBytes(bytes) +
+            ". Run `meteor reset --cache` to reclaim space, " +
+            "or set METEOR_BUNDLER_CACHE_QUIET=1 to silence this notice."
+          );
+        }
+      } catch (e) {
+        // ignore
+      }
+    }).catch(() => {
+      // Pruner is best-effort; never propagate failures.
+    });
   }
 
   return {

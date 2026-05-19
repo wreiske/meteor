@@ -292,10 +292,51 @@ as it could be, and whether we're using it as efficiently as we could be.
 See: https://github.com/meteor/meteor/issues/5818
 
 The "linker cache" on disk at `APP/.meteor/local/bundler-cache/linker` has some
-very large files that take a long time write, and they are apparently not
-cleaned up either.  Sometimes you will see calls to `files.writeFileAtomically`
-taking many seconds at the top of the "Rebuild App" report, but somehow outside
-the top level (probably because they are fired off asynchronously).
+very large files that take a long time write.  Sometimes you will see calls to
+`files.writeFileAtomically` taking many seconds at the top of the "Rebuild App"
+report, but somehow outside the top level (probably because they are fired off
+asynchronously).
+
+Historically the bundler cache (`bundler-cache/linker` and
+`bundler-cache/scanner`) was never garbage-collected and could grow to tens of
+gigabytes for long-lived apps. The Meteor tool now runs a best-effort,
+non-blocking pruner after each successful bundle (`tools/isobuild/bundler-cache-pruner.js`).
+The pruner:
+
+* Evicts entries older than `METEOR_BUNDLER_CACHE_MAX_AGE_DAYS` days
+  (default `30`).
+* Caps total on-disk size at `METEOR_BUNDLER_CACHE_MAX_BYTES` bytes
+  (default `2147483648`, i.e. 2 GiB) by removing the least-recently-touched
+  entries first.
+* Sweeps "orphaned" linker entries whose cache-key prefix no longer
+  corresponds to any active package in the current build, after they are at
+  least one day old.
+* Bumps `mtime` on every cache hit so that LRU eviction reflects real usage.
+
+Settings (mirroring the style of `METEOR_LINKER_CACHE_SIZE`):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `METEOR_BUNDLER_CACHE_MAX_BYTES` | `2147483648` (2 GiB) | Total on-disk size cap |
+| `METEOR_BUNDLER_CACHE_MAX_AGE_DAYS` | `30` | Evict entries not touched in N days |
+| `METEOR_BUNDLER_CACHE_DISABLE_PRUNE` | unset | Set to `1` to disable pruning entirely |
+| `METEOR_BUNDLER_CACHE_PRUNE_INTERVAL_MS` | `300000` (5 min) | Minimum interval between sweeps per process |
+| `METEOR_BUNDLER_CACHE_WARN_BYTES` | `5368709120` (5 GiB) | Threshold for the one-time "cache is large" warning |
+| `METEOR_BUNDLER_CACHE_QUIET` | unset | Set to `1` to suppress the one-time warning |
+| `METEOR_BUNDLER_CACHE_DEBUG` | unset | Set to `1` to log pruning activity to the console |
+
+If you want to wipe the bundler/build caches manually without touching your
+local database, run:
+
+```
+meteor reset --cache
+```
+
+This removes `.meteor/local/{bundler-cache,plugin-cache,build,isopacks}` and
+`node_modules/.cache/meteor` while preserving `.meteor/local/db` and the
+dev_bundle. The plain `meteor reset` command still clears everything except
+`db`, and `meteor reset --db` clears everything including the local Mongo
+database.
 
 ### Constraint Solving
 
