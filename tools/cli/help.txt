@@ -512,11 +512,16 @@ project directory, and the Meteor application must already be running.
 
 >>> reset
 Reset the project state.
-Usage: meteor reset [--db]
+Usage: meteor reset [--db] [--cache]
 
 Reset the current project to a fresh state and clear the local cache.
 
 The --db flag also removes the local database.
+
+The --cache flag clears only build caches
+(.meteor/local/{bundler-cache,plugin-cache,build,isopacks} and
+node_modules/.cache/meteor) and preserves the local database. Useful when
+.meteor/local/bundler-cache has grown too large.
 
 >>> deploy
 Deploy this project to Galaxy, Meteor's hosting service.

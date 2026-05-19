@@ -48,6 +48,7 @@ import { wrap } from "optimism";
 const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyAcornParse } = require("@meteorjs/reify/lib/parsers/acorn");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
+const bundlerCachePruner = require("./bundler-cache-pruner.js");
 
 import Resolver, { Resolution } from "./resolver";
 import LRUCache from 'lru-cache';
@@ -82,7 +83,11 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
 ) {
   if (cacheFilePath) {
     try {
-      return readFile(cacheFilePath, "utf8");
+      const cached = readFile(cacheFilePath, "utf8");
+      // Bump mtime so the bundler-cache pruner treats this entry as
+      // recently used and won't evict it under LRU/TTL pressure.
+      bundlerCachePruner.touchFile(cacheFilePath);
+      return cached;
     } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
     }
