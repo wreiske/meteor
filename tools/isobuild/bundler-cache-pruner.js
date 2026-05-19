@@ -242,20 +242,29 @@ function pruneSync({
   const bytesBefore = all.reduce((s, f) => s + f.size, 0);
 
   const removedPaths = new Set();
+  // Track files we *intentionally* released bytes for (i.e. unlink either
+  // succeeded or the file was already gone). Used so a non-ENOENT error
+  // path can't mess up size accounting later.
+  const reclaimedPaths = new Set();
   const removeOne = (f, reason) => {
     if (removedPaths.has(f.path)) return false;
     try {
       fs.unlinkSync(f.path);
       removedPaths.add(f.path);
+      reclaimedPaths.add(f.path);
       debugLog('removed', reason, f.path, '(' + f.size + ' bytes)');
       return true;
     } catch (e) {
-      if (e && e.code !== 'ENOENT') {
-        debugLog('failed to remove', f.path, e.message);
-      }
-      // Mark as removed for accounting so we don't try again this pass.
+      // Treat ENOENT (file already gone) as success for size accounting.
+      // For any other error, mark the file as "tried" so we don't retry
+      // this pass, but do NOT credit its bytes back to the caller.
       removedPaths.add(f.path);
-      return true;
+      if (e && e.code === 'ENOENT') {
+        reclaimedPaths.add(f.path);
+        return true;
+      }
+      debugLog('failed to remove', f.path, e && e.message);
+      return false;
     }
   };
 
@@ -282,11 +291,12 @@ function pruneSync({
     }
   }
 
-  // Pass 3: LRU eviction down to maxBytes.
+  // Pass 3: LRU eviction down to maxBytes. Only count files we actually
+  // reclaimed bytes for (successful unlink or ENOENT).
   let remainingBytes = 0;
   const remaining = [];
   for (const f of all) {
-    if (removedPaths.has(f.path)) continue;
+    if (reclaimedPaths.has(f.path)) continue;
     remainingBytes += f.size;
     remaining.push(f);
   }
@@ -295,7 +305,7 @@ function pruneSync({
     remaining.sort((a, b) => a.mtimeMs - b.mtimeMs);
     for (const f of remaining) {
       if (remainingBytes <= maxBytes) break;
-      if (removeOne(f, 'size-cap')) {
+      if (removeOne(f, 'size-cap') && reclaimedPaths.has(f.path)) {
         remainingBytes -= f.size;
       }
     }
@@ -303,7 +313,7 @@ function pruneSync({
 
   const summary = {
     scanned: all.length,
-    removed: removedPaths.size,
+    removed: reclaimedPaths.size,
     bytesBefore,
     bytesAfter: remainingBytes,
   };
