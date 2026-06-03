@@ -22,6 +22,7 @@ function getCommand (name, devBundleDir) {
     return result;
   }
 
+  // First, try to find the command in the dev bundle
   extensions.some(function (ext) {
     const cmd = path.join(devBundleDir, "bin", name + ext);
     try {
@@ -34,13 +35,25 @@ function getCommand (name, devBundleDir) {
     }
   });
 
+  // If not found in dev bundle and it's pnpm, try to find it in system PATH
+  if (! result && name === "pnpm") {
+    const which = require("which");
+    try {
+      result = which.sync("pnpm");
+    } catch (e) {
+      // pnpm not found in system PATH
+      result = null;
+    }
+  }
+
   return result;
 };
 
 function isValidCommand(name, devBundleDir) {
   if (name === "node" ||
       name === "npm" ||
-      name === "npx") {
+      name === "npx" ||
+      name === "pnpm") {
     return true;
   }
 

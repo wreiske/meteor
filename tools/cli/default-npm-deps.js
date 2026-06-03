@@ -33,6 +33,7 @@ export async function install(appDir, options) {
 
     const { runNpmCommand } = require("../isobuild/meteor-npm.js");
     const installResult = await runNpmCommand(npmCommand, appDir);
+
     if (! installResult.success) {
       buildmessage.error(
         "Could not install npm dependencies for test-packages: " +

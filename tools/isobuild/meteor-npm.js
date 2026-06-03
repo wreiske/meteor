@@ -954,6 +954,67 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
   });
 });
 
+var runPnpmCommand = meteorNpm.runPnpmCommand =
+Profile("meteorNpm.runPnpmCommand", async function (args, cwd) {
+  import { getEnv } from "../cli/dev-bundle-bin-helpers.js";
+
+  // Try to find pnpm in system PATH
+  let pnpmPath;
+  try {
+    const which = require("which");
+    pnpmPath = which.sync("pnpm");
+  } catch (e) {
+    // pnpm not found in system PATH
+    return {
+      success: false,
+      error: "pnpm is not installed or not found in system PATH",
+      stdout: "",
+      stderr: "pnpm is not installed or not found in system PATH"
+    };
+  }
+
+  const isWindows = process.platform === "win32";
+  let commandToRun = pnpmPath;
+  if (isWindows && pnpmPath.endsWith('.cmd')) {
+    args = ['/c', pnpmPath, ...args];
+    commandToRun = process.env.ComSpec || "cmd.exe";
+  }
+
+  if (meteorNpm._printNpmCalls) {
+    // only used by test-bundler.js
+    process.stdout.write('cd ' + cwd + ' && ' + commandToRun + ' ' +
+                         args.join(' ') + ' ...\n');
+  }
+
+  const env = await getEnv({devBundle: files.getDevBundle()});
+
+  const opts = {
+    env: env,
+    maxBuffer: 10 * 1024 * 1024
+  };
+
+  if (cwd) {
+    opts.cwd = files.convertToOSPath(cwd);
+  }
+
+  return new Promise(function (resolve) {
+    require('child_process').execFile(
+        commandToRun, args, opts, function (err, stdout, stderr) {
+          if (meteorNpm._printNpmCalls) {
+            process.stdout.write(err ? 'failed\n' : 'done\n');
+          }
+
+          resolve({
+            success: ! err,
+            error: (err ? `${err.message}${stderr}` : stderr),
+            stdout: stdout,
+            stderr: stderr
+          });
+        }
+    );
+  });
+});
+
 function pathMatches(path, test) {
   // Normalize path and test to avoid trailing slash discrepancies
   path = path.replace(/\/+$/, "");
